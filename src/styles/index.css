@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --sidebar: rgba(255, 255, 255, 0.85);
+  --header: rgba(255, 255, 255, 0.75);
+}
+
+.dark {
+  --bg: #0b1120;
+  --card: #1e293b;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --border: #334155;
+  --sidebar: rgba(30, 41, 59, 0.9);
+  --header: rgba(30, 41, 59, 0.8);
+}
+
+html, body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Google Sans", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Soft ambient background for light mode (Grok-like) */
+html.light body,
+html:not(.dark) body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(20, 184, 166, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139, 92, 246, 0.05), transparent);
+  background-attachment: fixed;
+}
+
+html.dark body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(20, 184, 166, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(99, 102, 241, 0.08), transparent);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #64748b44; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b77; }
+
+
+code, pre, .font-mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
