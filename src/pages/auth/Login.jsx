@@ -37,7 +37,7 @@ const Login = () => {
   };
 
   const handleGoogle = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/google`;
+    window.location.href = "https://money-webapp-server-deploy.onrender.com/api/auth/google";
   };
 
   return (
