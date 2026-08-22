@@ -121,15 +121,10 @@ export const translations = {
     to: "To",
     rate: "Rate",
     provider: "Provider",
-    // success: "Success",
-    budgets: "Budgets",
+    success: "Success",
     addBudget: "Add Budget",
     plannedIncome: "Planned income",
     spendingEnvelope: "Spending budget",
-    thisMonth: "This month",
-    overview: "Overview",
-    entries: "entries",
-    edit: "Edit",
     grid: "Grid",
     table: "Table",
     list: "List",
@@ -146,19 +141,11 @@ export const translations = {
     goalType: "Goal type",
     goalTitlePlaceholder: "e.g. Wedding fund, Trip to Japan",
     goalDescPlaceholder: "Why this goal matters to you",
-    targetAmount: "Target amount",
-    currentFunding: "Saved so far",
-    priority: "Priority",
-    title: "Title",
-    description: "Description",
     planning: "Planning",
     inProgress: "In Progress",
     paused: "Paused",
     accomplished: "Accomplished",
     cancelled: "Cancelled",
-    draft: "Draft",
-    confirmed: "Confirmed",
-    disbursed: "Disbursed",
 
     salaryBonusHistory: "Salary & Bonus History",
     originalSalary: "Original salary",
@@ -171,29 +158,24 @@ export const translations = {
     show: "Show",
     languageEnglish: "Language: English",
 
-    // --- UI phrases ---
     net: "Net",
     noBudgetThisMonth: "No budget for this month. Create one under Budgets.",
     amountsInUsd: "All amounts in USD (normalized)",
     noExpenseData: "No expense data for",
-    toolsPreferences: "Tools & Preferences",
     moneyOperations: "Money Operations",
     budgetSubtitle: "Monthly envelopes — income → savings + family + spending",
     budgetEmptyHint: "Plan monthly envelopes: income → save + family + spend",
-    // --- Bonus tags ---
     label_Performance: "Performance",
     label_Holiday: "Holiday",
     label_Project: "Project",
     label_Annual: "Annual",
     label_Referral: "Referral",
     label_Other: "Other",
-    // --- Saving categories ---
     label_Emergency: "Emergency",
     label_Travel: "Travel",
     label_House: "House",
     label_Education: "Education",
     label_Investment: "Investment",
-    // --- Relations ---
     label_Mother: "Mother",
     label_Father: "Father",
     label_Sibling: "Sibling",
@@ -201,7 +183,6 @@ export const translations = {
     label_Child: "Child",
     label_Relative: "Relative",
     label_Friend: "Friend",
-    // --- Goal types ---
     label_Buy_Item: "Buy Item",
     label_Marriage: "Marriage",
     label_Build_House: "Build House",
@@ -209,7 +190,6 @@ export const translations = {
     label_Long_term_Savings_Savings: "Long-term Savings",
     label_Goals: "Goals",
     label_Vehicle: "Vehicle",
-    // --- Note categories ---
     label_Personal_Finance_OS: "Personal Finance OS",
     label_Work: "Work",
     label_Personal: "Personal",
@@ -218,7 +198,6 @@ export const translations = {
     label_Health: "Health",
     label_Ideas: "Ideas",
     label_General: "General",
-    // expense cats already same English words
     label_Food: "Food",
     label_Rent: "Rent",
     label_Utilities: "Utilities",
@@ -227,7 +206,6 @@ export const translations = {
     label_Transport: "Transport",
     label_Entertainment: "Entertainment",
 
-    // --- Months ---
     month_1: "January",
     month_2: "February",
     month_3: "March",
@@ -240,7 +218,6 @@ export const translations = {
     month_10: "October",
     month_11: "November",
     month_12: "December",
-    // --- Month short ---
     monthShort_1: "Jan",
     monthShort_2: "Feb",
     monthShort_3: "Mar",
@@ -254,9 +231,6 @@ export const translations = {
     monthShort_11: "Nov",
     monthShort_12: "Dec",
 
-    // --- Period units ---
-    week: "Week",
-    day: "Day",
     byYear: "By year",
     byMonth: "By month",
     byWeek: "By week",
@@ -279,18 +253,12 @@ export const translations = {
     welcomeBack: "Welcome back",
     createAccount: "Create Account",
 
-    //  new words can be added here
     toolsPreferences: "Tools & Preferences",
-    overview: "Overview",
-    moneyOperations: "Money Operations",
     advancedFilters: "Advanced filters",
     filters: "Filters",
     searchNote: "Search Notes",
-    tag: "Tag",
-    amount: "Amount",
     payment: "Payment",
     clearAll: "Clear all",
-    category: "Category",
     clearFilters: "Clear filters",
     page: "page",
     of: "of",
@@ -298,7 +266,6 @@ export const translations = {
     incomePlan: "Income Plan",
     envelopesTotal: "Envelopes Total",
     searchTitle: "search title",
-    description: "Description",
     optionalNote: "Optional note...",
     type: "Type",
     low: "Low",
@@ -319,10 +286,6 @@ export const translations = {
     labelOptional: "Label (Optional)",
     zoomPreview: "Zoom Preview",
     moreItems: "more items",
-    monthly: "Monthly",
-    yearly: "Yearly",
-    weekly: "Weekly",
-    daily: "Daily",
     allTime: "All Time",
     refresh: "Refresh",
     noBudgetRecords: "No budget records found for this period",
@@ -331,8 +294,6 @@ export const translations = {
     transactions: "Transactions",
     salaryPBonus: "Salary and Bonus",
     savingsAndRemittances: "Savings and Remittances",
-    monthlyBreakdown: "Monthly Breakdown",
-    shareofSpending: "Share of Spending",
     monthlyBreakdown: "Monthly Breakdown",
     shareofSpending: "Share of Spending",
     categoryBreakdown: "Category Breakdown",
@@ -349,8 +310,6 @@ export const translations = {
     fileTypeLimit: "File type must be PNG, JPG, JPEG, Webp, PDF · max 8MB",
     recipients: "Recipients",
 
-    // note section
-    // Add inside 'en' translations:
     pin: "Pin",
     unpin: "Unpin",
     duplicate: "Duplicate",
@@ -363,16 +322,11 @@ export const translations = {
     uploadImageError: "Please upload an image file",
     zoomPreviewTitle: "Zoom Preview",
 
-    // Add inside en block
     retry: "Retry",
     dashboardUpdated: "Dashboard updated",
     allTimeTotal: "All Time Total",
     fullYear: "Full Year",
 
-    duplicate: "Duplicate",
-    duplicated: "Successfully duplicated",
-
-    // loans section
     addLoan: "Add Loan",
     loanLent: "I lent money",
     loanBorrowed: "I borrowed money",
@@ -389,7 +343,6 @@ export const translations = {
       "When you borrow: money enters as Saving (Loan return). When you repay: money leaves as Expense (Loan).",
     label_Loan: "Loan",
     label_LoanReturn: "Loan return",
-    label_Friend: "Friend",
     label_Colleague: "Colleague",
     label_Neighbor: "Neighbor",
 
@@ -427,33 +380,47 @@ export const translations = {
     longTermSavings: "Long-term Savings",
     goal: "Goals",
     markCompleted: "Mark completed",
-    kind: "Kink",
+    kind: "Kind",
     profit: "Profit",
     dividend: "Dividend",
     sale: "Sale",
     left: "Left",
     deposit: "Deposit",
-    other: "Other",
     addReturn: "Add Return",
     gain: "Gain",
     ongoing: "Ongoing",
     completed: "Completed",
-    inProgress: "In Progress",
     monitorTrackRemittance:
       "Track global wire transfers, family support, and recipient payment methods.",
     totalRemitted: "Total Remitted",
     UniqueRecip: "Unique Recipients",
     topContact: "Top Contact",
-    currency: "Currency",
     converted: "Converted",
     topExchangeSource: "Top exchange source",
     Outflow: "Outflow",
-    rate: "Rate",
     monitorExchangeRate:
       "Track foreign currency exchanges, rates, and provider distribution.",
     newFolder: "New folder",
     filter: "Filter",
     entryType: "Entry Type",
+
+    preferencesAndPersonalization: "Preferences & Personalization",
+    min6Characters: "Min 6 characters",
+    passwordsDoNotMatch: "Passwords do not match",
+    max8mb: "Max 8MB",
+    khmerLanguage: "Language: Khmer",
+
+    // --- Added / Fixed keys for Expenses component ---
+    enter_valid_amount: "Please enter a valid amount",
+    wait_for_upload: "Please wait for image upload to complete",
+    expense_updated: "Expense updated successfully",
+    expense_added: "Expense added successfully",
+    allExpensesDeleted: "All expenses deleted",
+    expensesdeletedsuccessfully: "Expense deleted successfully",
+    receiptImage: "Receipt image",
+    clickToUploadReceipt: "Click to upload receipt",
+    replaceImage: "Replace image",
+    imageFormatLimit: "JPG, PNG, WebP or PDF · max 8MB",
   },
 
   km: {
@@ -497,7 +464,7 @@ export const translations = {
     edit: "កែប្រែ",
     grid: "ប្រអប់",
     table: "តារាង",
-    list: "បញ្ចី",
+    list: "បញ្ជី",
     noDataToExport: "គ្មានទិន្នន័យដើម្បីនាំចេញ",
     emptyFile: "ឯកសារទទេ",
     delete: "លុប",
@@ -579,7 +546,7 @@ export const translations = {
     to: "ទៅ",
     rate: "អត្រា",
     provider: "អ្នកផ្តល់សេវា",
-    // success: "ជោគជ័យ",
+    success: "ជោគជ័យ",
 
     back: "ត្រឡប់",
     linkedSalary: "ប្រាក់ខែខែនេះ",
@@ -592,19 +559,11 @@ export const translations = {
     goalType: "ប្រភេទគោលដៅ",
     goalTitlePlaceholder: "ឧ. ថវិកាអាពាហ៍ពិពាហ៍",
     goalDescPlaceholder: "មូលហេតុនៃគោលដៅនេះ",
-    targetAmount: "ចំនួនគោលដៅ",
-    currentFunding: "បានសន្សំរួច",
-    priority: "អាទិភាព",
-    title: "ចំណងជើង",
-    description: "ការពិពណ៌នា",
     planning: "កំពុងរៀបចំ",
     inProgress: "កំពុងដំណើរការ",
     paused: "ផ្អាក",
     accomplished: "សម្រេច",
     cancelled: "បោះបង់",
-    draft: "ព្រាង",
-    confirmed: "បានបញ្ជាក់",
-    disbursed: "បានទទួល",
     spendingEnvelope: "ថវិកាចំណាយ",
     addBudget: "បន្ថែមថវិកា",
     budgets: "ថវិកា",
@@ -682,7 +641,6 @@ export const translations = {
     month_10: "តុលា",
     month_11: "វិច្ឆិកា",
     month_12: "ធ្នូ",
-    // --- Month short ---
     monthShort_1: "មករា",
     monthShort_2: "កុម្ភៈ",
     monthShort_3: "មីនា",
@@ -696,9 +654,6 @@ export const translations = {
     monthShort_11: "វិច្ឆិកា",
     monthShort_12: "ធ្នូ",
 
-    // --- Period units ---
-    week: "សប្តាហ៍",
-    day: "ថ្ងៃ",
     byYear: "តាមឆ្នាំ",
     byMonth: "តាមខែ",
     byWeek: "តាមសប្តាហ៍",
@@ -721,18 +676,11 @@ export const translations = {
     welcomeBack: "សូមស្វាគមន៍ការត្រឡប់មកវិញ",
     createAccount: "បង្កើតគណនី",
 
-    //  new words can be added here
-    toolsPreferences: "ឧបករណ៍ និងចំណូលចិត្ត",
-    overview: "ទិដ្ឋភាពទូទៅ",
-    moneyOperations: "ប្រតិបត្តិការហិរញ្ញវត្ថុ",
     advancedFilters: "ចម្រាញ់កម្រិតខ្ពស់",
     filters: "ចម្រាញ់",
     searchNote: "ស្វែងរកកំណត់ត្រា",
-    tag: "ថ្នាក់",
-    amount: "ចំនួន",
     payment: "ការទូទាត់",
     clearAll: "លុបទាំងអស់",
-    category: "ប្រភេទ",
     clearFilters: "លុបចម្រាញ់",
     page: "ទំព័រ",
     of: "នៃ",
@@ -741,7 +689,6 @@ export const translations = {
     envelopesTotal: "ស្រោមសំបុត្រសរុប",
     searchMonth: "ស្វែងរកខែ",
     searchTitle: "ស្វែងរកចំណាត់ថ្នាក់",
-    description: "ការពិពណ៌នា",
     optionalNote: "កំណត់ចំណាំជាជម្រើស",
     type: "ប្រភេទ",
     low: "ទាប",
@@ -762,10 +709,6 @@ export const translations = {
     labelOptional: "ចំណងជើង (ជាជម្រើស)",
     zoomPreview: "ពង្រីកមើលជាមុន",
     moreItems: "ធាតុផ្សេងទៀត",
-    yearly: "ប្រចាំឆ្នាំ",
-    monthly: "ប្រចាំខែ",
-    weekly: "ប្រចាំសប្តាហ៍",
-    daily: "ប្រចាំថ្ងៃ",
     allTime: "គ្រប់ពេលវេលា",
     refresh: "ធ្វើបច្ចុប្បន្នភាព",
     noBudgetRecords: "រកមិនឃើញកំណត់ត្រាថវិកាសម្រាប់រយៈពេលនេះទេ",
@@ -791,7 +734,6 @@ export const translations = {
       "ប្រភេទឯកសារត្រូវតែជា PNG, JPG, JPEG, Webp, PDF · អតិបរមា 8MB",
     recipients: "អ្នកទទួល",
 
-    // note section
     pin: "ខ្ទាស់",
     unpin: "ដោះខ្ទាស់",
     duplicate: "ចម្លង",
@@ -804,14 +746,11 @@ export const translations = {
     uploadImageError: "សូមផ្ទុកឡើងឯកសាររូបភាព",
     zoomPreviewTitle: "ពង្រីកមើលជាមុន",
 
-    // Add inside km block
     retry: "ព្យាយាមម្តងទៀត",
     dashboardUpdated: "ទិន្នន័យត្រូវបានធ្វើបច្ចុប្បន្នភាព",
     allTimeTotal: "សរុបគ្រប់ពេលវេលា",
     fullYear: "ពេញមួយឆ្នាំ",
 
-    duplicate: "ចម្លង",
-    duplicated: "បានចម្លងដោយជោគជ័យ",
     addLoan: "បន្ថែមខ្ចី/បំណុល",
     loanLent: "ខ្ញុំឱ្យគេខ្ចី",
     loanBorrowed: "ខ្ញុំខ្ចីគេ",
@@ -828,7 +767,6 @@ export const translations = {
       "ពេលខ្ចីគេ: លុយចូលជា សន្សំ (Loan return)។ ពេលសងគេ: លុយចេញជា ចំណាយ (Loan)។",
     label_Loan: "ខ្ចី",
     label_LoanReturn: "សងបំណុល",
-    label_Friend: "មិត្ត",
     label_Colleague: "មិត្តរួមការ",
     label_Neighbor: "អ្នកជិតខាង",
 
@@ -871,12 +809,10 @@ export const translations = {
     sale: "លក់",
     left: "ស្មើរ",
     deposit: "ប្រាក់បញ្ញើ",
-    other: "ផ្សេងទៀត",
     addReturn: "បន្ថែមត្រឡប់",
     gain: "ចំណេញ",
     ongoing: "កំពុងបន្ត",
     completed: "បានបញ្ចប់",
-    inProgress: "កំពុងដំណើរការ",
     monitorTrackRemittance:
       "តាមដានការផ្ទេរប្រាក់សកល ជំនួយគ្រួសារ និងវិធីបង់ប្រាក់របស់អ្នកទទួល។",
     totalRemitted: "សរុបមកវិញ",
@@ -885,7 +821,6 @@ export const translations = {
     converted: "បានបម្លែង",
     topExchangeSource: "ប្រភពប្តូរប្រាក់កំពូល",
     Outflow: "អត្រាលំហូរចេញ",
-    rate: "អត្រា",
     monitorExchangeRate:
       "តាមដានការប្តូរប្រាក់បរទេស អត្រា និងការចែកចាយរបស់អ្នកផ្តល់សេវា។",
     newFolder: "បង្កើតឯកសារថ្មី",
@@ -893,20 +828,36 @@ export const translations = {
     entryType: "ប្រភេទឯកសារ",
     folder: "កម្រងឯកសារ",
     fileUpload: "ផ្ទុកឡើងឯកសារ",
+
+    preferencesAndPersonalization: "ការផ្លាស់ប្តូរអនុវត្តភ្លាមៗ",
+    min6Characters: "យ៉ាងហោចណាស់ ៦ តួអក្សរ",
+    passwordsDoNotMatch: "ពាក្យសម្ងាត់មិនត្រូវគ្នាទេ",
+    max8mb: "ទំហំអតិបរមា 8MB",
+    khmerLanguage: "ភាសា: ខ្មែរ",
+
+    // --- Added / Fixed keys for Expenses component ---
+    enter_valid_amount: "សូមបញ្ចូលចំនួនទឹកប្រាក់ដែលត្រឹមត្រូវ",
+    wait_for_upload: "សូមរង់ចាំការផ្ទុកឡើងរូបភាពឱ្យបានរួចរាល់",
+    expense_updated: "បានធ្វើបច្ចុប្បន្នភាពការចំណាយដោយជោគជ័យ",
+    expense_added: "បានបន្ថែមការចំណាយដោយជោគជ័យ",
+    allExpensesDeleted: "បានលុបការចំណាយទាំងអស់",
+    expensesdeletedsuccessfully: "បានលុបការចំណាយដោយជោគជ័យ",
+    receiptImage: "រូបភាពបង្កាន់ដៃ",
+    clickToUploadReceipt: "ចុចដើម្បីផ្ទុកឡើងបង្កាន់ដៃ",
+    replaceImage: "ផ្លាស់ប្តូររូបភាព",
+    imageFormatLimit: "JPG, PNG, WebP ឬ PDF · អតិបរមា 8MB",
   },
 };
-/** Missing keys seen this session (dev diagnostics) */
+
 const missingKeys = new Set();
 
 export function t(key, lang = "en") {
   if (!key) return "";
   const dict = translations[lang] || translations.en;
 
-  // 1. Direct match
   if (typeof dict[key] === "string") return dict[key];
   if (typeof translations.en[key] === "string") return translations.en[key];
 
-  // 2. Track missing keys in Dev mode
   if (typeof window !== "undefined" && !missingKeys.has(key)) {
     missingKeys.add(key);
     if (import.meta?.env?.DEV) {
@@ -914,11 +865,9 @@ export function t(key, lang = "en") {
     }
   }
 
-  // 3. Always return a string value to prevent React runtime object crashes
   return String(key);
 }
 
-/** Translate enum / category labels: "Buy Item" → label_Buy_Item */
 export function tEnum(value, lang = "en") {
   if (value == null || value === "") return "";
   const key = "label_" + String(value).replace(/\s+/g, "_");
@@ -926,7 +875,6 @@ export function tEnum(value, lang = "en") {
   return result === key ? String(value) : result;
 }
 
-/** Month number 1–12 → localized name */
 export function tMonth(monthNumber, lang = "en", { short = false } = {}) {
   const n = Number(monthNumber);
   if (!n || n < 1 || n > 12) return "";
@@ -937,7 +885,6 @@ export function tMonthShort(monthNumber, lang = "en") {
   return tMonth(monthNumber, lang, { short: true });
 }
 
-/** Period unit: year | month | week | day */
 export function tPeriod(unit, lang = "en") {
   const u = String(unit || "").toLowerCase();
   const map = {
@@ -962,7 +909,6 @@ export function getMissingKeys() {
   return [...missingKeys].sort();
 }
 
-/** All keys for current language (for admin / debugging) */
 export function listKeys(lang = "en") {
   return Object.keys(translations[lang] || translations.en).sort();
 }

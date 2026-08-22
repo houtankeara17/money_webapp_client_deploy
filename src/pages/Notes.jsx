@@ -30,7 +30,9 @@ import {
   File,
   Paperclip,
   ChevronRight,
+  ChevronLeft,
   FolderPlus,
+  GripVertical,
 } from "lucide-react";
 import useI18n from "../hooks/useI18n";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -48,6 +50,7 @@ import {
   toggleChecklistItemApi,
   exportNotesApi,
   importNotesApi,
+  reorderNotesApi,
 } from "../services/notesApi";
 
 const COLORS = [
@@ -55,43 +58,43 @@ const COLORS = [
     id: "default",
     label: "Default",
     swatch: "bg-slate-200 dark:bg-slate-600",
-    card: "bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80",
+    card: "bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80 shadow-xs",
   },
   {
     id: "green",
     label: "Green",
     swatch: "bg-emerald-400",
-    card: "bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200/80 dark:border-emerald-800/60",
+    card: "bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200/80 dark:border-emerald-800/60 shadow-xs",
   },
   {
     id: "blue",
     label: "Teal",
     swatch: "bg-teal-400",
-    card: "bg-teal-50/80 dark:bg-teal-950/30 border-teal-200/80 dark:border-teal-800/60",
+    card: "bg-teal-50/80 dark:bg-teal-950/30 border-teal-200/80 dark:border-teal-800/60 shadow-xs",
   },
   {
     id: "yellow",
     label: "Yellow",
     swatch: "bg-amber-400",
-    card: "bg-amber-50/80 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-800/60",
+    card: "bg-amber-50/80 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-800/60 shadow-xs",
   },
   {
     id: "red",
     label: "Red",
     swatch: "bg-rose-400",
-    card: "bg-rose-50/80 dark:bg-rose-950/30 border-rose-200/80 dark:border-rose-800/60",
+    card: "bg-rose-50/80 dark:bg-rose-950/30 border-rose-200/80 dark:border-rose-800/60 shadow-xs",
   },
   {
     id: "purple",
     label: "Purple",
     swatch: "bg-violet-400",
-    card: "bg-violet-50/80 dark:bg-violet-950/30 border-violet-200/80 dark:border-violet-800/60",
+    card: "bg-violet-50/80 dark:bg-violet-950/30 border-violet-200/80 dark:border-violet-800/60 shadow-xs",
   },
   {
     id: "orange",
     label: "Orange",
     swatch: "bg-orange-400",
-    card: "bg-orange-50/80 dark:bg-orange-950/30 border-orange-200/80 dark:border-orange-800/60",
+    card: "bg-orange-50/80 dark:bg-orange-950/30 border-orange-200/80 dark:border-orange-800/60 shadow-xs",
   },
 ];
 
@@ -126,6 +129,7 @@ const emptyForm = () => ({
   items: [],
   links: [],
   image: "",
+  images: [],
 });
 
 const Notes = () => {
@@ -147,25 +151,27 @@ const Notes = () => {
   );
   const [form, setForm] = useState(emptyForm());
   const [newItemText, setNewItemText] = useState("");
-  const [newLink, setNewLink] = useState({ url: "", label: "" });
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [newLink, setNewLink] = useState({ url: "", label: "", tag: "" });
   const [confirmDel, setConfirmDel] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [formTab, setFormTab] = useState("content");
-  const [zoomImage, setZoomImage] = useState(null);
+  const [lightbox, setLightbox] = useState({ images: [], index: 0 });
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
-        if (zoomImage) setZoomImage(null);
+        if (lightbox.images.length) setLightbox({ images: [], index: 0 });
         else if (showForm && !saving) setShowForm(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showForm, saving, zoomImage]);
+  }, [showForm, saving, lightbox]);
 
   const setViewMode = (v) => {
     setView(v);
@@ -232,7 +238,7 @@ const Notes = () => {
         defaultType === "folder" ? "📁" : defaultType === "file" ? "📄" : "📝",
     });
     setNewItemText("");
-    setNewLink({ url: "", label: "" });
+    setNewLink({ url: "", label: "", tag: "" });
     setFormTab("content");
     setShowForm(true);
   };
@@ -243,6 +249,13 @@ const Notes = () => {
       return;
     }
     setEditing(note);
+    const imagesList =
+      Array.isArray(note.images) && note.images.length > 0
+        ? note.images
+        : note.image
+          ? [note.image]
+          : [];
+
     setForm({
       title: note.title || "",
       body: note.body || "",
@@ -254,7 +267,7 @@ const Notes = () => {
       pinned: !!note.pinned,
       items: (note.items || []).map((i) => ({
         _id: i._id,
-        text: i.text,
+        text: typeof i === "string" ? i : i.text || "",
         checked: !!i.checked,
         order: i.order ?? 0,
       })),
@@ -262,41 +275,44 @@ const Notes = () => {
         _id: l._id,
         url: l.url,
         label: l.label || "",
+        tag: l.tag || "",
       })),
       image: note.image || "",
+      images: imagesList,
     });
     setNewItemText("");
-    setNewLink({ url: "", label: "" });
+    setNewLink({ url: "", label: "", tag: "" });
     setFormTab("content");
     setShowForm(true);
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
-    if (form.type === "file") {
+    const imagePromises = files
+      .filter((file) => file.type.startsWith("image/"))
+      .map(
+        (file) =>
+          new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (evt) => resolve(evt.target.result);
+            reader.readAsDataURL(file);
+          }),
+      );
+
+    Promise.all(imagePromises).then((base64Images) => {
       setForm((prev) => ({
         ...prev,
-        title: prev.title || file.name,
-        fileType: file.type || "document",
+        image: prev.image || base64Images[0] || "",
+        images: [...(prev.images || []), ...base64Images],
       }));
-    }
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (event) =>
-        setForm((prev) => ({ ...prev, image: event.target.result }));
-      reader.readAsDataURL(file);
-    }
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) {
-      toast.error(t("titleRequired"));
-      return;
-    }
+    if (!form.title.trim()) return toast.error(t("titleRequired"));
     setSaving(true);
     try {
       const payload = {
@@ -309,29 +325,75 @@ const Notes = () => {
         categoryTag: form.categoryTag || "General",
         color: form.color || "default",
         pinned: !!form.pinned,
-        image: form.image || "",
-        items: form.items.map((it, idx) => ({
-          text: it.text,
-          checked: !!it.checked,
+        image: form.image || form.images?.[0] || "",
+        images: form.images || [],
+        items: (form.items || []).map((it, idx) => ({
+          text: typeof it === "string" ? it : it?.text || "",
+          checked: !!it?.checked,
           order: idx,
         })),
-        links: form.links.map((l) => ({ url: l.url, label: l.label || "" })),
+        links: (form.links || []).map((l) => ({
+          url: l.url,
+          label: l.label || "",
+          tag: l.tag || "",
+        })),
       };
 
       if (editing) {
         await updateNoteApi(editing._id, payload);
-        toast.success(t("noteUpdated"));
       } else {
         await createNoteApi(payload);
-        toast.success(t("noteCreated"));
       }
       setShowForm(false);
-      setEditing(null);
-      await fetchData({ silent: true });
+      fetchData({ silent: true });
     } catch (err) {
-      toast.error(err.response?.data?.message || t("failed"));
+      console.error("Save Note Error:", err);
+      toast.error(err.response?.data?.message || "Failed to save note");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDragStart = (e, id) => {
+    e.dataTransfer.setData("text/plain", id);
+    setDraggedId(id);
+  };
+
+  const handleDragOver = (e, id) => {
+    e.preventDefault();
+    if (dragOverId !== id) setDragOverId(id);
+  };
+
+  const handleDrop = async (e, targetId) => {
+    e.preventDefault();
+    setDragOverId(null);
+    if (!draggedId || draggedId === targetId) return;
+
+    const updatedItems = [...items];
+    const draggedIdx = updatedItems.findIndex((i) => i._id === draggedId);
+    const targetIdx = updatedItems.findIndex((i) => i._id === targetId);
+
+    if (draggedIdx === -1 || targetIdx === -1) return;
+
+    // Optimistically reorder in UI
+    const [draggedNote] = updatedItems.splice(draggedIdx, 1);
+    updatedItems.splice(targetIdx, 0, draggedNote);
+    setItems(updatedItems);
+    setDraggedId(null);
+
+    // Create array with explicit position indices
+    const reorderedPayload = updatedItems.map((item, index) => ({
+      _id: item._id,
+      position: index,
+    }));
+
+    try {
+      await reorderNotesApi(reorderedPayload);
+      toast.success("Order saved successfully!");
+    } catch (err) {
+      console.error("Failed to reorder notes:", err);
+      toast.error(err.response?.data?.message || "Failed to save order");
+      fetchData({ silent: true }); // Reset state back on failure
     }
   };
 
@@ -363,7 +425,7 @@ const Notes = () => {
         if (n._id !== noteId) return n;
         return {
           ...n,
-          items: n.items.map((it) =>
+          items: (n.items || []).map((it) =>
             it._id === itemId ? { ...it, checked: !it.checked } : it,
           ),
         };
@@ -409,7 +471,9 @@ const Notes = () => {
       }
       const formattedText = exportItems
         .map((note) =>
-          `Title: ${note.title}\nCategory: ${note.categoryTag}\nType: ${note.type}\n\n${note.body || ""}`.trim(),
+          `Title: ${note.title}\nCategory: ${note.categoryTag}\nType: ${
+            note.type
+          }\n\n${note.body || ""}`.trim(),
         )
         .join("\n\n---\n\n");
 
@@ -453,8 +517,12 @@ const Notes = () => {
     setForm({
       ...form,
       items: [
-        ...form.items,
-        { text: newItemText.trim(), checked: false, order: form.items.length },
+        ...(form.items || []),
+        {
+          text: newItemText.trim(),
+          checked: false,
+          order: form.items?.length || 0,
+        },
       ],
     });
     setNewItemText("");
@@ -466,14 +534,17 @@ const Notes = () => {
     if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
     setForm({
       ...form,
-      links: [...form.links, { url, label: newLink.label.trim() || url }],
+      links: [
+        ...(form.links || []),
+        { url, label: newLink.label.trim() || url, tag: newLink.tag.trim() },
+      ],
     });
-    setNewLink({ url: "", label: "" });
+    setNewLink({ url: "", label: "", tag: "" });
   };
 
-  const openImageZoom = (imgSrc, e) => {
+  const openLightbox = (images, startIndex, e) => {
     e?.stopPropagation();
-    setZoomImage(imgSrc);
+    setLightbox({ images, index: startIndex });
     setScale(1);
   };
 
@@ -485,8 +556,6 @@ const Notes = () => {
       month: "short",
       day: "numeric",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     }).format(date);
   };
 
@@ -503,42 +572,109 @@ const Notes = () => {
   const NoteCard = ({ note }) => {
     const isFolder = note.type === "folder";
     const isFile = note.type === "file";
-    const done = note.items?.filter((i) => i.checked).length || 0;
     const total = note.items?.length || 0;
     const formattedDate = formatDate(note.updatedAt || note.createdAt);
 
+    const imagesList =
+      Array.isArray(note.images) && note.images.length > 0
+        ? note.images
+        : note.image
+          ? [note.image]
+          : [];
+
+    const [imgIndex, setImgIndex] = useState(0);
+
+    const prevImage = (e) => {
+      e.stopPropagation();
+      setImgIndex((prev) => (prev === 0 ? imagesList.length - 1 : prev - 1));
+    };
+
+    const nextImage = (e) => {
+      e.stopPropagation();
+      setImgIndex((prev) => (prev === imagesList.length - 1 ? 0 : prev + 1));
+    };
+
     return (
       <div
+        draggable
+        onDragStart={(e) => handleDragStart(e, note._id)}
+        onDragOver={(e) => handleDragOver(e, note._id)}
+        onDrop={(e) => handleDrop(e, note._id)}
         onClick={() => openEdit(note)}
-        className={`group relative rounded-3xl border p-5 cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full min-h-[260px] backdrop-blur-md ${colorClass(
+        className={`group relative rounded-3xl border p-5 cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between h-full min-h-[280px] backdrop-blur-md ${colorClass(
           note.color,
-        )}`}
+        )} ${
+          draggedId === note._id
+            ? "opacity-30 scale-95 border-dashed border-teal-500"
+            : ""
+        } ${
+          dragOverId === note._id
+            ? "ring-2 ring-teal-500 border-teal-500 scale-[1.02]"
+            : ""
+        }`}
       >
         <div>
-          {note.image && !isFolder ? (
-            <div className="relative overflow-hidden rounded-2xl mb-4 h-36 w-full bg-slate-100 dark:bg-slate-900 group/img border border-slate-200/50 dark:border-slate-700/50">
+          <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 cursor-grab active:cursor-grabbing z-10">
+            <GripVertical size={16} />
+          </div>
+
+          {imagesList.length > 0 && !isFolder && (
+            <div className="relative overflow-hidden rounded-2xl mb-4 h-40 w-full bg-slate-900/10 dark:bg-slate-900 group/img border border-slate-200/50 dark:border-slate-700/50 mt-1">
               <img
-                src={note.image}
+                src={imagesList[imgIndex]}
                 alt=""
-                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover transition-all duration-500"
               />
+
+              {imagesList.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={prevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all hover:bg-slate-900"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={nextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all hover:bg-slate-900"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
+                    {imagesList.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 rounded-full transition-all ${
+                          i === imgIndex
+                            ? "w-4 bg-teal-400"
+                            : "w-1.5 bg-white/60"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
               <button
                 type="button"
-                onClick={(e) => openImageZoom(note.image, e)}
-                className="absolute top-2 right-2 p-2 rounded-xl bg-slate-900/70 backdrop-blur-md text-white opacity-0 group-hover/img:opacity-100 transition-all duration-200"
+                onClick={(e) => openLightbox(imagesList, imgIndex, e)}
+                className="absolute top-2 right-2 p-1.5 rounded-xl bg-slate-900/70 backdrop-blur-md text-white opacity-0 group-hover/img:opacity-100 transition-all hover:scale-105"
               >
                 <Eye size={14} />
               </button>
             </div>
-          ) : null}
+          )}
 
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="text-xl p-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl shrink-0 shadow-2xs border border-slate-200/60 dark:border-slate-700/60">
+          <div className="flex items-start justify-between gap-2 mb-3 mt-1">
+            <div className="flex items-center gap-2.5 min-w-0 pl-3">
+              <span className="text-lg p-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-2xl shrink-0 shadow-2xs border border-slate-200/60 dark:border-slate-700/60">
                 {isFolder ? (
-                  <Folder size={20} className="text-amber-500" />
+                  <Folder size={18} className="text-amber-500" />
                 ) : isFile ? (
-                  <Paperclip size={20} className="text-slate-500" />
+                  <Paperclip size={18} className="text-slate-500" />
                 ) : (
                   note.icon || "📝"
                 )}
@@ -548,25 +684,29 @@ const Notes = () => {
               </h3>
             </div>
 
-            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-2xs">
+            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-1 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-md">
               {!isFolder && (
                 <button
                   type="button"
                   onClick={(e) => handleDuplicate(note._id, e)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
                 >
-                  <Copy size={14} />
+                  <Copy size={13} />
                 </button>
               )}
               <button
                 type="button"
                 onClick={(e) => handleTogglePin(note._id, e)}
-                className={`p-1.5 rounded-lg transition ${note.pinned ? "text-amber-500" : "text-slate-400 hover:text-amber-500"}`}
+                className={`p-1.5 rounded-xl transition ${
+                  note.pinned
+                    ? "text-amber-500"
+                    : "text-slate-400 hover:text-amber-500"
+                }`}
               >
                 {note.pinned ? (
-                  <Pin size={14} className="fill-amber-500" />
+                  <Pin size={13} className="fill-amber-500" />
                 ) : (
-                  <PinOff size={14} />
+                  <PinOff size={13} />
                 )}
               </button>
               <button
@@ -575,22 +715,21 @@ const Notes = () => {
                   e.stopPropagation();
                   setConfirmDel(note._id);
                 }}
-                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/40 transition"
+                className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/40 transition"
               >
-                <Trash2 size={14} />
+                <Trash2 size={13} />
               </button>
             </div>
           </div>
 
           {note.body ? (
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-3 mb-4 whitespace-pre-wrap leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 line-clamp-3 mb-4 whitespace-pre-wrap leading-relaxed px-1">
               {note.body}
             </p>
           ) : null}
 
-          {/* Checklist preview */}
           {total > 0 && (
-            <ul className="space-y-1.5 mb-4 bg-white/60 dark:bg-slate-900/50 backdrop-blur-sm p-3 rounded-2xl border border-slate-200/60 dark:border-slate-700/40">
+            <ul className="space-y-1.5 mb-4 bg-white/50 dark:bg-slate-900/40 backdrop-blur-xs p-3 rounded-2xl border border-slate-200/50 dark:border-slate-700/30">
               {note.items.slice(0, 3).map((item) => (
                 <li
                   key={item._id || item.text}
@@ -601,7 +740,9 @@ const Notes = () => {
                     onClick={(e) =>
                       item._id && handleToggleCheck(note._id, item._id, e)
                     }
-                    className={`shrink-0 ${item.checked ? "text-teal-600" : "text-slate-400"}`}
+                    className={`shrink-0 ${
+                      item.checked ? "text-teal-600" : "text-slate-400"
+                    }`}
                   >
                     {item.checked ? (
                       <CheckCircle2 size={14} />
@@ -610,7 +751,11 @@ const Notes = () => {
                     )}
                   </button>
                   <span
-                    className={`truncate ${item.checked ? "line-through text-slate-400" : "text-slate-700 dark:text-slate-200"}`}
+                    className={`truncate ${
+                      item.checked
+                        ? "line-through text-slate-400"
+                        : "text-slate-700 dark:text-slate-200"
+                    }`}
                   >
                     {item.text}
                   </span>
@@ -618,20 +763,42 @@ const Notes = () => {
               ))}
             </ul>
           )}
+
+          {note.links && note.links.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {note.links.map((link, idx) => (
+                <a
+                  key={link._id || idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-xs font-medium border border-teal-500/20 transition"
+                >
+                  <ExternalLink size={12} />
+                  <span>{link.label || link.url}</span>
+                  {link.tag && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-md bg-teal-600/20 text-[10px] uppercase font-bold tracking-wider">
+                      {link.tag}
+                    </span>
+                  )}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 mt-auto flex flex-col gap-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 px-2.5 py-1 rounded-xl text-slate-700 dark:text-slate-300">
-              {isFolder
-                ? "📁 Folder"
-                : isFile
-                  ? "📄 File"
-                  : `${catEmoji(note.categoryTag)} ${tEnum(note.categoryTag)}`}
-            </span>
-          </div>
+        <div className="pt-3 border-t border-slate-200/60 dark:border-slate-700/60 mt-auto flex items-center justify-between">
+          <span className="font-semibold bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 px-2.5 py-1 rounded-xl text-slate-700 dark:text-slate-300 text-xs">
+            {isFolder
+              ? "📁 Folder"
+              : isFile
+                ? "📄 File"
+                : `${catEmoji(note.categoryTag)} ${tEnum(note.categoryTag)}`}
+          </span>
+
           {formattedDate && (
-            <div className="flex items-center text-[11px] text-slate-400 font-medium pt-1">
+            <div className="flex items-center text-[11px] text-slate-400 font-medium">
               <Calendar size={12} className="text-teal-600 mr-1" />
               {formattedDate}
             </div>
@@ -651,12 +818,27 @@ const Notes = () => {
             return (
               <div
                 key={note._id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, note._id)}
+                onDragOver={(e) => handleDragOver(e, note._id)}
+                onDrop={(e) => handleDrop(e, note._id)}
                 onClick={() => openEdit(note)}
                 className={`rounded-2xl border p-4 flex items-center justify-between gap-4 cursor-pointer hover:shadow-md transition backdrop-blur-md ${colorClass(
                   note.color,
-                )}`}
+                )} ${
+                  draggedId === note._id
+                    ? "opacity-30 border-dashed border-teal-500"
+                    : ""
+                } ${
+                  dragOverId === note._id
+                    ? "ring-2 ring-teal-500 border-teal-500"
+                    : ""
+                }`}
               >
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <div className="text-slate-400 cursor-grab active:cursor-grabbing">
+                    <GripVertical size={16} />
+                  </div>
                   <span className="text-2xl p-2.5 bg-white/80 dark:bg-slate-900/80 rounded-2xl shrink-0 border border-slate-200/50 dark:border-slate-700/50">
                     {isFolder ? (
                       <Folder size={20} className="text-amber-500" />
@@ -701,7 +883,6 @@ const Notes = () => {
 
   return (
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-[1700px] mx-auto">
-      {/* Top Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2.5">
@@ -717,7 +898,6 @@ const Notes = () => {
           </p>
         </div>
 
-        {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2.5">
           <ViewToggle view={view} onChange={setViewMode} />
 
@@ -763,11 +943,12 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Directory Breadcrumbs Bar */}
       <nav className="flex items-center gap-2 mb-6 p-3 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-sm font-semibold">
         <button
           onClick={() => handleNavigateBreadcrumb(null)}
-          className={`hover:text-teal-600 transition ${!currentFolder ? "text-teal-600 font-bold" : "text-slate-500"}`}
+          className={`hover:text-teal-600 transition ${
+            !currentFolder ? "text-teal-600 font-bold" : "text-slate-500"
+          }`}
         >
           Root
         </button>
@@ -792,7 +973,6 @@ const Notes = () => {
         )}
       </nav>
 
-      {/* Control & Search Bar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search
@@ -828,7 +1008,6 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Category Ribbon */}
       <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-8 no-scrollbar">
         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 uppercase tracking-wider pr-3 border-r border-slate-200 dark:border-slate-700 shrink-0">
           <Filter size={13} className="text-teal-600" />
@@ -860,7 +1039,6 @@ const Notes = () => {
         ))}
       </div>
 
-      {/* Modal Form Overlay */}
       {showForm && (
         <div
           onClick={() => !saving && setShowForm(false)}
@@ -1037,7 +1215,7 @@ const Notes = () => {
               {formTab === "checklist" && (
                 <div className="space-y-4">
                   <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {form.items.map((item, idx) => (
+                    {(form.items || []).map((item, idx) => (
                       <div
                         key={idx}
                         className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700"
@@ -1056,7 +1234,9 @@ const Notes = () => {
                           className="rounded text-teal-600 h-4 w-4"
                         />
                         <input
-                          value={item.text}
+                          value={
+                            typeof item === "string" ? item : item.text || ""
+                          }
                           onChange={(e) => {
                             const items = [...form.items];
                             items[idx] = {
@@ -1110,8 +1290,8 @@ const Notes = () => {
                   <div className="space-y-3">
                     <label className="text-xs font-bold text-slate-500 flex items-center justify-between uppercase tracking-wider">
                       <span className="flex items-center gap-1.5">
-                        <ImageIcon size={14} className="text-teal-600" /> Cover
-                        Image / File
+                        <ImageIcon size={14} className="text-teal-600" /> Image
+                        Gallery / File Uploads
                       </span>
                     </label>
 
@@ -1120,21 +1300,61 @@ const Notes = () => {
                         type="text"
                         value={form.image}
                         onChange={(e) =>
-                          setForm({ ...form, image: e.target.value })
+                          setForm({
+                            ...form,
+                            image: e.target.value,
+                            images: form.images?.length
+                              ? [e.target.value, ...form.images.slice(1)]
+                              : [e.target.value],
+                          })
                         }
                         className={inputCls}
                         placeholder={`${t("pasteURL")} (https://...)`}
                       />
                       <label className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
                         <Upload size={14} className="text-teal-600" />
-                        <span>Upload File</span>
+                        <span>Upload Files (Multiple)</span>
                         <input
                           type="file"
+                          multiple
                           onChange={handleFileUpload}
                           className="hidden"
                         />
                       </label>
                     </div>
+
+                    {form.images && form.images.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 pt-2">
+                        {form.images.map((img, idx) => (
+                          <div
+                            key={idx}
+                            className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 h-20 bg-slate-100 dark:bg-slate-900"
+                          >
+                            <img
+                              src={img}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextImages = form.images.filter(
+                                  (_, i) => i !== idx,
+                                );
+                                setForm({
+                                  ...form,
+                                  images: nextImages,
+                                  image: nextImages[0] || "",
+                                });
+                              }}
+                              className="absolute top-1 right-1 p-1 bg-slate-900/80 text-rose-400 rounded-lg opacity-0 group-hover:opacity-100 transition"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-700/60">
@@ -1143,14 +1363,14 @@ const Notes = () => {
                       {t("external")}
                     </label>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         value={newLink.url}
                         onChange={(e) =>
                           setNewLink({ ...newLink, url: e.target.value })
                         }
                         placeholder="https://..."
-                        className={`flex-1 min-w-[140px] ${inputCls}`}
+                        className={`flex-1 ${inputCls}`}
                       />
                       <input
                         value={newLink.label}
@@ -1158,16 +1378,64 @@ const Notes = () => {
                           setNewLink({ ...newLink, label: e.target.value })
                         }
                         placeholder={t("labelOptional")}
-                        className={`w-32 ${inputCls}`}
+                        className={`w-full sm:w-32 ${inputCls}`}
                       />
-                      <button
-                        type="button"
-                        onClick={addLink}
-                        className="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-semibold"
-                      >
-                        {t("add")}
-                      </button>
+                      <div className="flex gap-2">
+                        <input
+                          value={newLink.tag}
+                          onChange={(e) =>
+                            setNewLink({ ...newLink, tag: e.target.value })
+                          }
+                          placeholder="Tag (e.g. Work)"
+                          className={`w-full sm:w-28 ${inputCls}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={addLink}
+                          className="px-4 py-2 rounded-xl bg-teal-600 text-white text-xs font-semibold shrink-0"
+                        >
+                          {t("add")}
+                        </button>
+                      </div>
                     </div>
+
+                    {(form.links || []).length > 0 && (
+                      <div className="space-y-1.5 pt-2">
+                        {form.links.map((link, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs"
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <ExternalLink
+                                size={12}
+                                className="text-teal-600 shrink-0"
+                              />
+                              <span className="font-semibold truncate">
+                                {link.label || link.url}
+                              </span>
+                              {link.tag && (
+                                <span className="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-600 font-bold text-[10px] uppercase">
+                                  {link.tag}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setForm({
+                                  ...form,
+                                  links: form.links.filter((_, i) => i !== idx),
+                                })
+                              }
+                              className="p-1 text-slate-400 hover:text-rose-500"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1210,17 +1478,16 @@ const Notes = () => {
         </div>
       )}
 
-      {/* Image Zoom Modal */}
-      {zoomImage && (
+      {lightbox.images.length > 0 && (
         <div
-          onClick={() => setZoomImage(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+          onClick={() => setLightbox({ images: [], index: 0 })}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-xs"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-5xl w-full flex flex-col items-center"
+            className="relative max-w-5xl w-full flex flex-col items-center justify-center"
           >
-            <div className="absolute top-4 right-4 flex items-center gap-2 bg-slate-900/80 p-2 rounded-2xl border border-slate-700 z-10">
+            <div className="absolute top-4 right-4 flex items-center gap-2 bg-slate-900/80 p-2 rounded-2xl border border-slate-700 z-20">
               <button
                 onClick={() => setScale((s) => Math.min(s + 0.25, 3))}
                 className="p-2 text-white"
@@ -1237,20 +1504,55 @@ const Notes = () => {
                 <RotateCcw size={16} />
               </button>
               <button
-                onClick={() => setZoomImage(null)}
+                onClick={() => setLightbox({ images: [], index: 0 })}
                 className="p-2 text-rose-400"
               >
                 <X size={16} />
               </button>
             </div>
-            <div className="overflow-auto max-h-[85vh] max-w-full p-8 flex items-center justify-center">
+
+            {lightbox.images.length > 1 && (
+              <button
+                onClick={() =>
+                  setLightbox((prev) => ({
+                    ...prev,
+                    index:
+                      prev.index === 0
+                        ? prev.images.length - 1
+                        : prev.index - 1,
+                  }))
+                }
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-slate-900/80 text-white border border-slate-700 hover:bg-slate-800 z-20"
+              >
+                <ChevronLeft size={20} />
+              </button>
+            )}
+
+            <div className="overflow-auto max-h-[80vh] max-w-full p-6 flex items-center justify-center">
               <img
-                src={zoomImage}
+                src={lightbox.images[lightbox.index]}
                 alt=""
-                className="transition-transform duration-150 max-h-[80vh] object-contain rounded-2xl"
+                className="transition-transform duration-200 max-h-[75vh] object-contain rounded-2xl shadow-2xl"
                 style={{ transform: `scale(${scale})` }}
               />
             </div>
+
+            {lightbox.images.length > 1 && (
+              <button
+                onClick={() =>
+                  setLightbox((prev) => ({
+                    ...prev,
+                    index:
+                      prev.index === prev.images.length - 1
+                        ? 0
+                        : prev.index + 1,
+                  }))
+                }
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-slate-900/80 text-white border border-slate-700 hover:bg-slate-800 z-20"
+              >
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
         </div>
       )}

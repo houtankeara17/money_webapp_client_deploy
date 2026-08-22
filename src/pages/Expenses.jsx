@@ -1189,7 +1189,7 @@ const Expense2 = () => {
 
             <div>
               <label className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1 mb-1.5">
-                <ImageIcon size={13} /> Receipt image
+                <ImageIcon size={13} /> {t("receiptImage")}
               </label>
               {preview ? (
                 <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
@@ -1233,10 +1233,10 @@ const Expense2 = () => {
                     <Upload size={22} />
                   </div>
                   <span className="text-sm font-medium">
-                    {uploading ? "Uploading..." : "Click to upload receipt"}
+                    {uploading ? t("uploading") : t("clickToUploadReceipt")}
                   </span>
                   <span className="text-xs text-slate-400">
-                    JPG, PNG, WebP or PDF · max 8MB
+                    {t("imageFormatLimit")}
                   </span>
                 </button>
               )}
@@ -1253,7 +1253,7 @@ const Expense2 = () => {
                   onClick={() => fileRef.current?.click()}
                   className="mt-2 text-xs text-teal-600 dark:text-teal-400 hover:underline font-semibold"
                 >
-                  Replace image
+                  {t("replaceImage")}
                 </button>
               )}
             </div>

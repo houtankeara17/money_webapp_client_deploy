@@ -44,3 +44,7 @@ export const exportNotesApi = () => {
 export const importNotesApi = (text) => {
   return api.post("/notes/import", { text });
 };
+
+export const reorderNotesApi = (items) => {
+  return api.patch("/notes/reorder", { items });
+};

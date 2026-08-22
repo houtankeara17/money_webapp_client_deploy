@@ -1,5 +1,6 @@
 import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "../../store/ThemeContext";
+import useI18n from "../../hooks/useI18n"; // Import i18n hook
 
 /** Navbar icon that cycles dark → light → system */
 export function ThemeToggle({ size = "md" }) {
@@ -34,6 +35,7 @@ export function ThemeToggle({ size = "md" }) {
 
 /** iOS switch light ↔ dark */
 export function ThemeSwitch() {
+  const { t } = useI18n();
   const { resolvedDark, changeTheme, theme } = useTheme();
   const on = resolvedDark;
 
@@ -56,7 +58,7 @@ export function ThemeSwitch() {
         />
       </button>
       <Moon size={16} className={on ? "text-teal-400" : "text-slate-400"} />
-      <span className="text-xs text-slate-500 capitalize">{theme}</span>
+      <span className="text-xs text-slate-500 capitalize">{t(theme)}</span>
     </div>
   );
 }
@@ -65,12 +67,13 @@ export function ThemeSwitch() {
  * Grok-style theme preview cards: Light / Dark / System
  */
 export function ThemeCards() {
+  const { t } = useI18n();
   const { theme, changeTheme } = useTheme();
 
   const cards = [
     {
       id: "light",
-      label: "Light",
+      label: t("light"),
       preview: (
         <div className="w-full h-14 rounded-lg bg-gradient-to-b from-slate-50 to-slate-100 border border-slate-200 p-1.5 flex flex-col gap-1">
           <div className="h-1.5 w-8 rounded bg-slate-300" />
@@ -81,7 +84,7 @@ export function ThemeCards() {
     },
     {
       id: "dark",
-      label: "Dark",
+      label: t("dark"),
       preview: (
         <div className="w-full h-14 rounded-lg bg-gradient-to-b from-slate-900 to-black border border-slate-700 p-1.5 flex flex-col gap-1">
           <div className="h-1.5 w-8 rounded bg-slate-600" />
@@ -92,7 +95,7 @@ export function ThemeCards() {
     },
     {
       id: "system",
-      label: "System",
+      label: t("system"),
       preview: (
         <div className="w-full h-14 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-600 flex">
           <div className="w-1/2 bg-slate-100 p-1.5 flex flex-col gap-1">

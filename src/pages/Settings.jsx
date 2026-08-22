@@ -101,7 +101,7 @@ const Settings = () => {
     if (!file) return;
 
     if (file.size > 8 * 1024 * 1024) {
-      toast.error("Max 8MB");
+      toast.error(t("max8mb"));
       return;
     }
 
@@ -159,17 +159,17 @@ const Settings = () => {
 
   const handleLanguageClick = async (lang) => {
     await changeLanguage(lang);
-    toast.success(lang === "km" ? "ភាសា: ខ្មែរ" : "Language: English");
+    toast.success(lang === "km" ? t("khmerLanguage") : t("languageEnglish"));
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (passwords.newPassword.length < 6) {
-      toast.error("Min 6 characters");
+      toast.error(t("min6Characters"));
       return;
     }
     if (passwords.newPassword !== passwords.confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error(t("passwordsDoNotMatch"));
       return;
     }
     setSavingPassword(true);
@@ -219,9 +219,7 @@ const Settings = () => {
             </span>
           </div>
           <p className="text-slate-300 text-sm font-medium">
-            {language === "km"
-              ? "ការផ្លាស់ប្តូរអនុវត្តភ្លាមៗ"
-              : "Preferences & Personalization"}
+            {t("preferencesAndPersonalization")}
           </p>
         </div>
       </div>

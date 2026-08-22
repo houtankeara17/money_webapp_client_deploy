@@ -849,7 +849,7 @@ const Bonus = () => {
                   <th className="p-4">{t("month")}</th>
                   <th className="p-4">{t("status")}</th>
                   <th className="p-4">{t("paymentMethod")}</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="p-4 text-right">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/40">

@@ -754,7 +754,7 @@ const Budgets = () => {
                   <th className="p-4 hidden md:table-cell">
                     {t("spendingEnvelope") || "Spending"}
                   </th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="p-4 text-right">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/40">
