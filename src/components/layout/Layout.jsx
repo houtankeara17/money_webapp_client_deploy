@@ -51,11 +51,11 @@ const NAV_GROUPS = [
     items: [
       { to: "/expenses", icon: Wallet, key: "expenses" },
       { to: "/salaries", icon: Banknote, key: "salary" },
+      { to: "/budgets", icon: PieChart, key: "budgets" },
       { to: "/bonuses", icon: Gift, key: "bonus" },
       { to: "/savings", icon: PiggyBank, key: "savings" },
-      { to: "/budgets", icon: PieChart, key: "budgets" },
-      { to: "/plans", icon: Target, key: "plans" },
       { to: "/remittances", icon: Send, key: "remittances" },
+      { to: "/plans", icon: Target, key: "plans" },
       { to: "/loans", icon: Banknote, key: "loans" },
       { to: "/exchange-logs", icon: ArrowRightLeft, key: "exchange" },
     ],
