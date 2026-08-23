@@ -360,26 +360,123 @@ const Notes = () => {
     }
   };
 
+  const isFolderDropTarget = (id) => {
+    if (!id || id === "root") return true;
+    const inItems = items.find((i) => i._id === id);
+    if (inItems?.type === "folder") return true;
+    if (breadcrumbs.some((b) => b._id === id)) return true;
+    if (currentFolder?._id === id) return true;
+    return false;
+  };
+
   const handleDragStart = (e, id) => {
     e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
     setDraggedId(id);
   };
 
   const handleDragOver = (e, id) => {
     e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "move";
     if (dragOverId !== id) setDragOverId(id);
+  };
+
+  const handleDragLeave = (e, id) => {
+    // Only clear if leaving this element (not entering a child)
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    if (dragOverId === id) setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   const handleDrop = async (e, targetId) => {
     e.preventDefault();
+    e.stopPropagation();
     setDragOverId(null);
-    if (!draggedId || draggedId === targetId) return;
 
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      return;
+    }
+
+    const draggedItem = items.find((i) => i._id === draggedId);
+    // Allow drop even if item not in current list is rare; normally it is
+    if (!draggedItem && !selectedIds.has(draggedId)) {
+      setDraggedId(null);
+      return;
+    }
+
+    // ── Move into folder / root ─────────────────────────────────────────────
+    if (isFolderDropTarget(targetId)) {
+      const newFolderId = targetId === "root" ? null : targetId;
+
+      // Don't move a folder into itself
+      if (draggedId === newFolderId) {
+        setDraggedId(null);
+        return;
+      }
+
+      // Multi-select: move all selected if the dragged item is part of selection
+      let idsToMove =
+        selectedIds.has(draggedId) && selectedIds.size > 1
+          ? Array.from(selectedIds)
+          : [draggedId];
+
+      // Never move the destination folder into itself
+      idsToMove = idsToMove.filter((id) => id !== newFolderId);
+
+      const targetFolderIdStr = newFolderId ? String(newFolderId) : null;
+
+      // Skip items already in the destination folder
+      idsToMove = idsToMove.filter((id) => {
+        const item = items.find((i) => i._id === id);
+        if (!item) return true;
+        const itemFid = item.folderId ? String(item.folderId) : null;
+        return itemFid !== targetFolderIdStr;
+      });
+
+      if (idsToMove.length === 0) {
+        setDraggedId(null);
+        return;
+      }
+
+      // Optimistic remove from current view
+      setItems((prev) => prev.filter((i) => !idsToMove.includes(i._id)));
+      setSelectedIds(new Set());
+      setDraggedId(null);
+
+      try {
+        await Promise.all(
+          idsToMove.map((id) =>
+            updateNoteApi(id, { folderId: newFolderId }),
+          ),
+        );
+        toast.success(
+          idsToMove.length > 1
+            ? `Moved ${idsToMove.length} items`
+            : "Moved successfully",
+        );
+      } catch (err) {
+        console.error("Failed to move:", err);
+        toast.error(err.response?.data?.message || "Failed to move");
+        fetchData({ silent: true });
+      }
+      return;
+    }
+
+    // ── Reorder among siblings (drop on non-folder) ─────────────────────────
     const updatedItems = [...items];
     const draggedIdx = updatedItems.findIndex((i) => i._id === draggedId);
     const targetIdx = updatedItems.findIndex((i) => i._id === targetId);
 
-    if (draggedIdx === -1 || targetIdx === -1) return;
+    if (draggedIdx === -1 || targetIdx === -1) {
+      setDraggedId(null);
+      return;
+    }
 
     const [draggedNote] = updatedItems.splice(draggedIdx, 1);
     updatedItems.splice(targetIdx, 0, draggedNote);
@@ -613,12 +710,15 @@ const Notes = () => {
   // ─── Folder Card (grid) – matches screenshot style ────────────────────────
   const FolderCard = ({ note }) => {
     const isSelected = selectedIds.has(note._id);
+    const isDropTarget = dragOverId === note._id && draggedId && draggedId !== note._id;
     return (
       <div
         draggable
         onDragStart={(e) => handleDragStart(e, note._id)}
         onDragOver={(e) => handleDragOver(e, note._id)}
+        onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
+        onDragEnd={handleDragEnd}
         onClick={() => handleOpenFolder(note)}
         className={`group relative rounded-2xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80 p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center text-center min-h-[160px] ${
           isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""
@@ -627,8 +727,8 @@ const Notes = () => {
             ? "opacity-30 scale-95 border-dashed border-teal-500"
             : ""
         } ${
-          dragOverId === note._id
-            ? "ring-2 ring-teal-500 border-teal-500 scale-[1.02]"
+          isDropTarget
+            ? "ring-2 ring-amber-500 border-amber-500 bg-amber-50/80 dark:bg-amber-950/30 scale-[1.03] shadow-lg shadow-amber-500/20"
             : ""
         }`}
       >
@@ -738,7 +838,9 @@ const Notes = () => {
         draggable
         onDragStart={(e) => handleDragStart(e, note._id)}
         onDragOver={(e) => handleDragOver(e, note._id)}
+        onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
+        onDragEnd={handleDragEnd}
         onClick={() => openEdit(note)}
         className={`group relative rounded-2xl border p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between h-full min-h-[220px] backdrop-blur-md ${colorClass(
           note.color,
@@ -941,13 +1043,17 @@ const Notes = () => {
     const isFile = note.type === "file";
     const formattedDate = formatDate(note.updatedAt || note.createdAt);
     const isSelected = selectedIds.has(note._id);
+    const isDropTarget =
+      dragOverId === note._id && draggedId && draggedId !== note._id;
 
     return (
       <div
         draggable
         onDragStart={(e) => handleDragStart(e, note._id)}
         onDragOver={(e) => handleDragOver(e, note._id)}
+        onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
+        onDragEnd={handleDragEnd}
         onClick={() => (isFolder ? handleOpenFolder(note) : openEdit(note))}
         className={`group rounded-xl border px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition ${
           isSelected
@@ -958,9 +1064,11 @@ const Notes = () => {
             ? "opacity-30 border-dashed border-teal-500"
             : ""
         } ${
-          dragOverId === note._id
-            ? "ring-2 ring-teal-500 border-teal-500"
-            : ""
+          isDropTarget && isFolder
+            ? "ring-2 ring-amber-500 border-amber-500 bg-amber-50/60 dark:bg-amber-950/20"
+            : isDropTarget
+              ? "ring-2 ring-teal-500 border-teal-500"
+              : ""
         }`}
       >
         <input
@@ -1068,6 +1176,8 @@ const Notes = () => {
           const isSelected = selectedIds.has(note._id);
           const created = formatDate(note.createdAt);
           const updated = formatDate(note.updatedAt || note.createdAt);
+          const isDropTarget =
+            dragOverId === note._id && draggedId && draggedId !== note._id;
 
           return (
             <div
@@ -1075,7 +1185,9 @@ const Notes = () => {
               draggable
               onDragStart={(e) => handleDragStart(e, note._id)}
               onDragOver={(e) => handleDragOver(e, note._id)}
+              onDragLeave={(e) => handleDragLeave(e, note._id)}
               onDrop={(e) => handleDrop(e, note._id)}
+              onDragEnd={handleDragEnd}
               onClick={() =>
                 isFolder ? handleOpenFolder(note) : openEdit(note)
               }
@@ -1083,6 +1195,14 @@ const Notes = () => {
                 isSelected
                   ? "bg-teal-50/40 dark:bg-teal-950/15"
                   : ""
+              } ${
+                isDropTarget && isFolder
+                  ? "bg-amber-50/70 dark:bg-amber-950/25 ring-1 ring-inset ring-amber-400"
+                  : isDropTarget
+                    ? "bg-teal-50/50 dark:bg-teal-950/20"
+                    : ""
+              } ${
+                draggedId === note._id ? "opacity-30" : ""
               }`}
             >
               <div onClick={(e) => e.stopPropagation()}>
