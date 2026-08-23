@@ -444,6 +444,23 @@ const Notes = () => {
         return;
       }
 
+      // Prevent cycles: cannot move a folder into one of its own descendants
+      if (newFolderId) {
+        const foldersBeingMoved = idsToMove.filter((id) => {
+          const it = items.find((i) => i._id === id);
+          return it?.type === "folder";
+        });
+
+        for (const folderId of foldersBeingMoved) {
+          const descendants = await getDescendantFolderIds(folderId);
+          if (descendants.has(newFolderId) || folderId === newFolderId) {
+            toast.error("Cannot move a folder into its own subfolder");
+            setDraggedId(null);
+            return;
+          }
+        }
+      }
+
       // Optimistic remove from current view
       setItems((prev) => prev.filter((i) => !idsToMove.includes(i._id)));
       setSelectedIds(new Set());
@@ -540,22 +557,103 @@ const Notes = () => {
     }
   };
 
+  /**
+   * Recursively delete a folder and every nested child at any depth.
+   * Children are loaded via the API, folders are deleted depth-first,
+   * then the folder itself is removed.
+   */
+  const deleteRecursive = async (id) => {
+    try {
+      const { data } = await fetchNotesApi({
+        folderId: id,
+        limit: 500,
+      });
+      const children = Array.isArray(data?.data?.items) ? data.data.items : [];
+
+      for (const child of children) {
+        if (child.type === "folder") {
+          await deleteRecursive(child._id);
+        } else {
+          await deleteNoteApi(child._id);
+        }
+      }
+    } catch (err) {
+      console.error("Recursive delete – failed loading children:", err);
+    }
+    await deleteNoteApi(id);
+  };
+
+  /**
+   * Collect all descendant folder IDs under a given folder (BFS).
+   * Used to prevent moving a folder into one of its own descendants.
+   */
+  const getDescendantFolderIds = async (folderId) => {
+    const ids = new Set();
+    const queue = [folderId];
+
+    while (queue.length > 0) {
+      const fid = queue.shift();
+      try {
+        const { data } = await fetchNotesApi({
+          folderId: fid,
+          limit: 500,
+          type: "folder",
+        });
+        const children = Array.isArray(data?.data?.items)
+          ? data.data.items
+          : [];
+        for (const c of children) {
+          if (c.type === "folder" && !ids.has(c._id)) {
+            ids.add(c._id);
+            queue.push(c._id);
+          }
+        }
+      } catch {
+        break;
+      }
+    }
+    return ids;
+  };
+
   const doDelete = async () => {
     setDeleting(true);
     try {
       if (confirmDel === "selected") {
         const ids = Array.from(selectedIds);
-        await Promise.all(ids.map((id) => deleteNoteApi(id)));
+        // Delete folders recursively so nested content is removed
+        for (const id of ids) {
+          const item = items.find((i) => i._id === id);
+          if (item?.type === "folder") {
+            await deleteRecursive(id);
+          } else {
+            await deleteNoteApi(id);
+          }
+        }
         toast.success(`${ids.length} item(s) deleted`);
         setSelectedIds(new Set());
+      } else if (confirmDel === "all") {
+        await deleteNoteApi("all");
+        toast.success(t("allNotesDeleted") || "All notes deleted");
       } else {
-        await deleteNoteApi(confirmDel);
-        toast.success(
-          confirmDel === "all" ? t("allNotesDeleted") : t("noteDeleted"),
-        );
+        const item = items.find((i) => i._id === confirmDel);
+        if (item?.type === "folder") {
+          await deleteRecursive(confirmDel);
+        } else {
+          await deleteNoteApi(confirmDel);
+        }
+        toast.success(t("noteDeleted") || "Deleted");
         if (editing && editing._id === confirmDel) {
           setShowForm(false);
           setEditing(null);
+        }
+        // If we deleted a folder that is in the breadcrumb path, navigate up
+        if (
+          currentFolder &&
+          (currentFolder._id === confirmDel ||
+            breadcrumbs.some((b) => b._id === confirmDel))
+        ) {
+          setCurrentFolder(null);
+          setBreadcrumbs([]);
         }
       }
       setConfirmDel(null);
@@ -1404,12 +1502,20 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Breadcrumb */}
+      {/* Breadcrumb — droppable to move items up */}
       <nav className="flex items-center gap-1.5 mb-5 px-3.5 py-2.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-sm font-semibold overflow-x-auto">
         <button
+          type="button"
           onClick={() => handleNavigateBreadcrumb(null)}
-          className={`hover:text-teal-600 transition shrink-0 ${
+          onDragOver={(e) => handleDragOver(e, "root")}
+          onDragLeave={(e) => handleDragLeave(e, "root")}
+          onDrop={(e) => handleDrop(e, "root")}
+          className={`hover:text-teal-600 transition shrink-0 px-2 py-1 rounded-lg ${
             !currentFolder ? "text-teal-600 font-bold" : "text-slate-500"
+          } ${
+            dragOverId === "root" && draggedId
+              ? "ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700"
+              : ""
           }`}
         >
           Root
@@ -1418,8 +1524,16 @@ const Notes = () => {
           <Fragment key={b._id}>
             <ChevronRight size={14} className="text-slate-400 shrink-0" />
             <button
+              type="button"
               onClick={() => handleNavigateBreadcrumb(b, idx)}
-              className="text-slate-500 hover:text-teal-600 transition truncate max-w-[120px]"
+              onDragOver={(e) => handleDragOver(e, b._id)}
+              onDragLeave={(e) => handleDragLeave(e, b._id)}
+              onDrop={(e) => handleDrop(e, b._id)}
+              className={`text-slate-500 hover:text-teal-600 transition truncate max-w-[120px] px-2 py-1 rounded-lg ${
+                dragOverId === b._id && draggedId
+                  ? "ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700"
+                  : ""
+              }`}
             >
               {b.title}
             </button>
@@ -1428,7 +1542,7 @@ const Notes = () => {
         {currentFolder && (
           <>
             <ChevronRight size={14} className="text-slate-400 shrink-0" />
-            <span className="text-teal-600 font-bold truncate max-w-[160px]">
+            <span className="text-teal-600 font-bold truncate max-w-[160px] px-2 py-1">
               {currentFolder.title}
             </span>
           </>
@@ -2099,14 +2213,18 @@ const Notes = () => {
             ? t("deleteAll") || "Delete All"
             : confirmDel === "selected"
               ? "Delete Selected"
-              : t("delete") || "Delete"
+              : items.find((i) => i._id === confirmDel)?.type === "folder"
+                ? "Delete Folder"
+                : t("delete") || "Delete"
         }
         message={
           confirmDel === "all"
             ? t("confirmDeleteAll") || "Delete all notes and folders?"
             : confirmDel === "selected"
-              ? `Delete ${selectedIds.size} selected item(s)?`
-              : t("confirmDelete") || "Delete this item?"
+              ? `Delete ${selectedIds.size} selected item(s)? Folders will be deleted with all nested contents.`
+              : items.find((i) => i._id === confirmDel)?.type === "folder"
+                ? "Delete this folder and all nested folders, notes, and files inside it? This cannot be undone."
+                : t("confirmDelete") || "Delete this item?"
         }
       />
 
