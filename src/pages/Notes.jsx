@@ -164,17 +164,47 @@ const Notes = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showFilters, setShowFilters] = useState(false);
 
+  // Duplicate-with-rename modal
+  const [dupModal, setDupModal] = useState(null); // { id, title, color, type } | null
+  const [dupSaving, setDupSaving] = useState(false);
+  const dupTitleRef = useRef(null);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Don't hijack keys while typing in inputs/modals
+      const tag = e.target?.tagName?.toLowerCase();
+      const isTyping =
+        tag === "input" ||
+        tag === "textarea" ||
+        e.target?.isContentEditable;
+
       if (e.key === "Escape") {
         if (lightbox.images.length) setLightbox({ images: [], index: 0 });
+        else if (dupModal && !dupSaving) setDupModal(null);
         else if (showForm && !saving) setShowForm(false);
         else if (selectedIds.size) setSelectedIds(new Set());
+        return;
+      }
+
+      // Ctrl/Cmd + D → duplicate with rename
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && !isTyping) {
+        e.preventDefault();
+        // Prefer single selection, else first selected, else nothing
+        let targetId = null;
+        if (selectedIds.size === 1) {
+          targetId = Array.from(selectedIds)[0];
+        } else if (selectedIds.size > 1) {
+          // Multi: open rename for the first selected
+          targetId = Array.from(selectedIds)[0];
+        }
+        if (targetId) {
+          openDuplicateModal(targetId);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showForm, saving, lightbox, selectedIds]);
+  }, [showForm, saving, lightbox, selectedIds, dupModal, dupSaving, items]);
 
   const setViewMode = (v) => {
     setView(v);
@@ -525,14 +555,53 @@ const Notes = () => {
     }
   };
 
-  const handleDuplicate = async (id, e) => {
+  const openDuplicateModal = (id, e) => {
     e?.stopPropagation?.();
+    const note = items.find((i) => i._id === id);
+    if (!note) return;
+    setDupModal({
+      id: note._id,
+      title: `${note.title} (copy)`,
+      color: note.color || "default",
+      type: note.type || "note",
+      originalTitle: note.title,
+    });
+    // Focus title input after paint
+    setTimeout(() => dupTitleRef.current?.focus?.(), 50);
+  };
+
+  // Keep old name as alias for any remaining call sites
+  const handleDuplicate = openDuplicateModal;
+
+  const confirmDuplicate = async () => {
+    if (!dupModal?.id) return;
+    const title = (dupModal.title || "").trim();
+    if (!title) {
+      toast.error(t("titleRequired") || "Title is required");
+      return;
+    }
+    setDupSaving(true);
     try {
-      await duplicateNoteApi(id);
-      toast.success(t("duplicated"));
+      // 1) Create the copy via API
+      const { data } = await duplicateNoteApi(dupModal.id);
+      const created = data?.data || data;
+      const newId = created?._id;
+
+      // 2) Apply custom title + color
+      if (newId) {
+        await updateNoteApi(newId, {
+          title,
+          color: dupModal.color || "default",
+        });
+      }
+      toast.success(t("duplicated") || "Duplicated");
+      setDupModal(null);
       fetchData({ silent: true });
-    } catch {
-      toast.error(t("failed"));
+    } catch (err) {
+      console.error("Duplicate failed:", err);
+      toast.error(err.response?.data?.message || t("failed") || "Failed");
+    } finally {
+      setDupSaving(false);
     }
   };
 
@@ -809,6 +878,11 @@ const Notes = () => {
   const FolderCard = ({ note }) => {
     const isSelected = selectedIds.has(note._id);
     const isDropTarget = dragOverId === note._id && draggedId && draggedId !== note._id;
+    // Tint folder card with its color (still keep yellow folder icon)
+    const folderColorCls =
+      note.color && note.color !== "default"
+        ? colorClass(note.color)
+        : "bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80";
     return (
       <div
         draggable
@@ -818,7 +892,7 @@ const Notes = () => {
         onDrop={(e) => handleDrop(e, note._id)}
         onDragEnd={handleDragEnd}
         onClick={() => handleOpenFolder(note)}
-        className={`group relative rounded-2xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80 p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center text-center min-h-[160px] ${
+        className={`group relative rounded-2xl border p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center text-center min-h-[160px] ${folderColorCls} ${
           isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""
         } ${
           draggedId === note._id
@@ -1631,10 +1705,22 @@ const Notes = () => {
           <button
             type="button"
             onClick={() => {
-              Array.from(selectedIds).forEach((id) => handleDuplicate(id));
-              setSelectedIds(new Set());
+              const ids = Array.from(selectedIds);
+              if (ids.length === 1) {
+                openDuplicateModal(ids[0]);
+              } else if (ids.length > 1) {
+                // Multi: quick-duplicate each (API default name), no rename dialog
+                Promise.all(ids.map((id) => duplicateNoteApi(id)))
+                  .then(() => {
+                    toast.success(`Duplicated ${ids.length} items`);
+                    setSelectedIds(new Set());
+                    fetchData({ silent: true });
+                  })
+                  .catch(() => toast.error(t("failed") || "Failed"));
+              }
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition"
+            title="Duplicate (Ctrl/Cmd+D to rename)"
           >
             <Copy size={14} /> Duplicate
           </button>
@@ -2199,6 +2285,118 @@ const Notes = () => {
                 <ChevronRight size={20} />
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate with rename + color */}
+      {dupModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          onClick={() => !dupSaving && setDupModal(null)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-3xl bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/60">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Duplicate
+                  {dupModal.type === "folder" ? " folder" : ""}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Rename and choose a color ·{" "}
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-mono">
+                    Ctrl+D
+                  </kbd>
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={dupSaving}
+                onClick={() => setDupModal(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-5">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
+                  Name
+                </label>
+                <input
+                  ref={dupTitleRef}
+                  value={dupModal.title}
+                  onChange={(e) =>
+                    setDupModal((prev) =>
+                      prev ? { ...prev, title: e.target.value } : prev,
+                    )
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      confirmDuplicate();
+                    }
+                  }}
+                  className={`${inputCls} font-semibold`}
+                  placeholder="New name..."
+                />
+                {dupModal.originalTitle && (
+                  <p className="text-[11px] text-slate-400 mt-1.5">
+                    Original: {dupModal.originalTitle}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                  Color
+                  {dupModal.type === "folder" ? " (folder)" : ""}
+                </label>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {COLORS.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() =>
+                        setDupModal((prev) =>
+                          prev ? { ...prev, color: c.id } : prev,
+                        )
+                      }
+                      title={c.label}
+                      className={`w-8 h-8 rounded-full ${c.swatch} border-2 transition ${
+                        dupModal.color === c.id
+                          ? "border-teal-600 scale-110 ring-2 ring-teal-500/30"
+                          : "border-transparent opacity-80 hover:opacity-100"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-end gap-2 bg-slate-50/50 dark:bg-slate-800/50">
+              <button
+                type="button"
+                disabled={dupSaving}
+                onClick={() => setDupModal(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={dupSaving}
+                onClick={confirmDuplicate}
+                className="px-5 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-md shadow-teal-500/20 flex items-center gap-1.5"
+              >
+                <Copy size={14} />
+                {dupSaving ? "Duplicating..." : "Duplicate"}
+              </button>
+            </div>
           </div>
         </div>
       )}
