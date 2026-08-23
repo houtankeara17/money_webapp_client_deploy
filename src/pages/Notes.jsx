@@ -34,6 +34,8 @@ import {
   MoreHorizontal,
   Move,
   Archive,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import useI18n from "../hooks/useI18n";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -131,6 +133,7 @@ const emptyForm = () => ({
   links: [],
   image: "",
   images: [],
+  password: "", // optional lock (test only — plain text)
 });
 
 const Notes = () => {
@@ -169,6 +172,12 @@ const Notes = () => {
   const [dupSaving, setDupSaving] = useState(false);
   const dupTitleRef = useRef(null);
 
+  // Password unlock modal (test only)
+  const [pwdModal, setPwdModal] = useState(null); // { note, action: 'open' | 'edit' } | null
+  const [pwdInput, setPwdInput] = useState("");
+  const [pwdError, setPwdError] = useState("");
+  const pwdInputRef = useRef(null);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Don't hijack keys while typing in inputs/modals
@@ -180,26 +189,38 @@ const Notes = () => {
 
       if (e.key === "Escape") {
         if (lightbox.images.length) setLightbox({ images: [], index: 0 });
-        else if (dupModal && !dupSaving) setDupModal(null);
+        else if (pwdModal) {
+          setPwdModal(null);
+          setPwdInput("");
+          setPwdError("");
+        } else if (dupModal && !dupSaving) setDupModal(null);
         else if (showForm && !saving) setShowForm(false);
         else if (selectedIds.size) setSelectedIds(new Set());
         return;
       }
 
-      // Ctrl/Cmd + D → duplicate with rename
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && !isTyping) {
+      // Ctrl/Cmd + D → duplicate with rename dialog
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key.toLowerCase() === "d" &&
+        !isTyping &&
+        !showForm &&
+        !dupModal
+      ) {
         e.preventDefault();
-        // Prefer single selection, else first selected, else nothing
-        let targetId = null;
-        if (selectedIds.size === 1) {
-          targetId = Array.from(selectedIds)[0];
-        } else if (selectedIds.size > 1) {
-          // Multi: open rename for the first selected
-          targetId = Array.from(selectedIds)[0];
-        }
-        if (targetId) {
-          openDuplicateModal(targetId);
-        }
+        const targetId =
+          selectedIds.size >= 1 ? Array.from(selectedIds)[0] : null;
+        if (!targetId) return;
+        const note = items.find((i) => i._id === targetId);
+        if (!note) return;
+        setDupModal({
+          id: note._id,
+          title: `${note.title} (copy)`,
+          color: note.color || "default",
+          type: note.type || "note",
+          originalTitle: note.title,
+        });
+        setTimeout(() => dupTitleRef.current?.focus?.(), 50);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -248,10 +269,81 @@ const Notes = () => {
     };
   }, [fetchData]);
 
-  const handleOpenFolder = (folder) => {
+  const enterFolder = (folder) => {
     setBreadcrumbs((prev) => [...prev, currentFolder].filter(Boolean));
     setCurrentFolder(folder);
     setSelectedIds(new Set());
+  };
+
+  const openEditForm = (note) => {
+    setEditing(note);
+    const imagesList =
+      Array.isArray(note.images) && note.images.length > 0
+        ? note.images
+        : note.image
+          ? [note.image]
+          : [];
+
+    setForm({
+      title: note.title || "",
+      body: note.body || "",
+      icon: note.icon || "📝",
+      type: note.type || "note",
+      fileType: note.fileType || "",
+      categoryTag: note.categoryTag || "General",
+      color: note.color || "default",
+      pinned: !!note.pinned,
+      items: (note.items || []).map((i) => ({
+        _id: i._id,
+        text: typeof i === "string" ? i : i.text || "",
+        checked: !!i.checked,
+        order: i.order ?? 0,
+      })),
+      links: (note.links || []).map((l) => ({
+        _id: l._id,
+        url: l.url,
+        label: l.label || "",
+        tag: l.tag || "",
+      })),
+      image: note.image || "",
+      images: imagesList,
+      password: note.password || "",
+    });
+    setNewItemText("");
+    setNewLink({ url: "", label: "", tag: "" });
+    setFormTab("content");
+    setShowForm(true);
+  };
+
+  /** Gate open/edit behind password when set (test only — plain compare) */
+  const requirePasswordThen = (note, action) => {
+    if (note.password) {
+      setPwdModal({ note, action });
+      setPwdInput("");
+      setPwdError("");
+      setTimeout(() => pwdInputRef.current?.focus?.(), 50);
+      return;
+    }
+    if (action === "open") enterFolder(note);
+    else openEditForm(note);
+  };
+
+  const confirmPassword = () => {
+    if (!pwdModal) return;
+    if (pwdInput === pwdModal.note.password) {
+      const { note, action } = pwdModal;
+      setPwdModal(null);
+      setPwdInput("");
+      setPwdError("");
+      if (action === "open") enterFolder(note);
+      else openEditForm(note);
+    } else {
+      setPwdError("Incorrect password");
+    }
+  };
+
+  const handleOpenFolder = (folder) => {
+    requirePasswordThen(folder, "open");
   };
 
   const handleNavigateBreadcrumb = (targetFolder, index) => {
@@ -284,42 +376,7 @@ const Notes = () => {
       handleOpenFolder(note);
       return;
     }
-    setEditing(note);
-    const imagesList =
-      Array.isArray(note.images) && note.images.length > 0
-        ? note.images
-        : note.image
-          ? [note.image]
-          : [];
-
-    setForm({
-      title: note.title || "",
-      body: note.body || "",
-      icon: note.icon || "📝",
-      type: note.type || "note",
-      fileType: note.fileType || "",
-      categoryTag: note.categoryTag || "General",
-      color: note.color || "default",
-      pinned: !!note.pinned,
-      items: (note.items || []).map((i) => ({
-        _id: i._id,
-        text: typeof i === "string" ? i : i.text || "",
-        checked: !!i.checked,
-        order: i.order ?? 0,
-      })),
-      links: (note.links || []).map((l) => ({
-        _id: l._id,
-        url: l.url,
-        label: l.label || "",
-        tag: l.tag || "",
-      })),
-      image: note.image || "",
-      images: imagesList,
-    });
-    setNewItemText("");
-    setNewLink({ url: "", label: "", tag: "" });
-    setFormTab("content");
-    setShowForm(true);
+    requirePasswordThen(note, "edit");
   };
 
   const handleFileUpload = (e) => {
@@ -373,6 +430,8 @@ const Notes = () => {
           label: l.label || "",
           tag: l.tag || "",
         })),
+        // test only — plain text password lock
+        password: form.password || "",
       };
 
       if (editing) {
@@ -565,13 +624,67 @@ const Notes = () => {
       color: note.color || "default",
       type: note.type || "note",
       originalTitle: note.title,
+      password: note.password || "",
     });
-    // Focus title input after paint
     setTimeout(() => dupTitleRef.current?.focus?.(), 50);
   };
 
-  // Keep old name as alias for any remaining call sites
   const handleDuplicate = openDuplicateModal;
+
+  /**
+   * Deep-copy an item into destFolderId.
+   * Folders recurse: every nested folder/file/note is recreated under the new folder.
+   * Password (if any) is copied too.
+   */
+  const deepDuplicateFromItem = async (item, destFolderId, overrides = {}) => {
+    const payload = {
+      title: overrides.title ?? item.title,
+      body: item.body || "",
+      icon: item.icon || (item.type === "folder" ? "📁" : "📝"),
+      type: item.type || "note",
+      fileType: item.fileType || "",
+      folderId: destFolderId ?? null,
+      categoryTag: item.categoryTag || "General",
+      color: overrides.color ?? item.color ?? "default",
+      pinned: false,
+      image: item.image || "",
+      images: Array.isArray(item.images) ? item.images : [],
+      items: (item.items || []).map((it, idx) => ({
+        text: typeof it === "string" ? it : it?.text || "",
+        checked: false,
+        order: idx,
+      })),
+      links: (item.links || []).map((l) => ({
+        url: l.url,
+        label: l.label || "",
+        tag: l.tag || "",
+      })),
+      password:
+        overrides.password !== undefined
+          ? overrides.password
+          : item.password || "",
+    };
+
+    const { data } = await createNoteApi(payload);
+    const created = data?.data || data;
+
+    // Recurse into folder children
+    if (item.type === "folder" && created?._id) {
+      const { data: childRes } = await fetchNotesApi({
+        folderId: item._id,
+        limit: 500,
+      });
+      const children = Array.isArray(childRes?.data?.items)
+        ? childRes.data.items
+        : [];
+
+      for (const child of children) {
+        await deepDuplicateFromItem(child, created._id);
+      }
+    }
+
+    return created;
+  };
 
   const confirmDuplicate = async () => {
     if (!dupModal?.id) return;
@@ -580,21 +693,32 @@ const Notes = () => {
       toast.error(t("titleRequired") || "Title is required");
       return;
     }
+    const source = items.find((i) => i._id === dupModal.id);
+    if (!source) {
+      toast.error("Item not found");
+      return;
+    }
+
     setDupSaving(true);
     try {
-      // 1) Create the copy via API
-      const { data } = await duplicateNoteApi(dupModal.id);
-      const created = data?.data || data;
-      const newId = created?._id;
+      // Place the copy in the same parent as the source
+      const destFolderId =
+        source.folderId || currentFolder?._id || null;
 
-      // 2) Apply custom title + color
-      if (newId) {
-        await updateNoteApi(newId, {
-          title,
-          color: dupModal.color || "default",
-        });
-      }
-      toast.success(t("duplicated") || "Duplicated");
+      await deepDuplicateFromItem(source, destFolderId, {
+        title,
+        color: dupModal.color || "default",
+        password:
+          dupModal.password !== undefined
+            ? dupModal.password
+            : source.password || "",
+      });
+
+      toast.success(
+        source.type === "folder"
+          ? "Folder duplicated (including all contents)"
+          : t("duplicated") || "Duplicated",
+      );
       setDupModal(null);
       fetchData({ silent: true });
     } catch (err) {
@@ -954,7 +1078,10 @@ const Notes = () => {
               strokeWidth={1.5}
             />
           </div>
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate w-full px-1">
+          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate w-full px-1 flex items-center justify-center gap-1">
+            {note.password ? (
+              <Lock size={12} className="text-amber-600 shrink-0" />
+            ) : null}
             {note.title}
           </h3>
           {note.pinned && (
@@ -1093,7 +1220,10 @@ const Notes = () => {
                   note.icon || "📝"
                 )}
               </span>
-              <h3 className="font-bold truncate text-sm text-slate-900 dark:text-slate-100 tracking-tight">
+              <h3 className="font-bold truncate text-sm text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-1">
+                {note.password ? (
+                  <Lock size={12} className="text-amber-600 shrink-0" />
+                ) : null}
                 {note.title}
               </h3>
             </div>
@@ -1266,7 +1396,10 @@ const Notes = () => {
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate flex items-center gap-1">
+            {note.password ? (
+              <Lock size={12} className="text-amber-600 shrink-0" />
+            ) : null}
             {note.title}
           </h3>
           <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
@@ -1395,7 +1528,10 @@ const Notes = () => {
                     <span className="text-sm">{note.icon || "📝"}</span>
                   )}
                 </div>
-                <span className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
+                <span className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate flex items-center gap-1">
+                  {note.password ? (
+                    <Lock size={12} className="text-amber-600 shrink-0" />
+                  ) : null}
                   {note.title}
                 </span>
                 {note.pinned && (
@@ -1704,19 +1840,28 @@ const Notes = () => {
           <div className="w-px h-5 bg-slate-600" />
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const ids = Array.from(selectedIds);
               if (ids.length === 1) {
                 openDuplicateModal(ids[0]);
               } else if (ids.length > 1) {
-                // Multi: quick-duplicate each (API default name), no rename dialog
-                Promise.all(ids.map((id) => duplicateNoteApi(id)))
-                  .then(() => {
-                    toast.success(`Duplicated ${ids.length} items`);
-                    setSelectedIds(new Set());
-                    fetchData({ silent: true });
-                  })
-                  .catch(() => toast.error(t("failed") || "Failed"));
+                // Multi: deep-duplicate each (folders include nested contents)
+                try {
+                  for (const id of ids) {
+                    const source = items.find((i) => i._id === id);
+                    if (!source) continue;
+                    const destFolderId =
+                      source.folderId || currentFolder?._id || null;
+                    await deepDuplicateFromItem(source, destFolderId, {
+                      title: `${source.title} (copy)`,
+                    });
+                  }
+                  toast.success(`Duplicated ${ids.length} items`);
+                  setSelectedIds(new Set());
+                  fetchData({ silent: true });
+                } catch {
+                  toast.error(t("failed") || "Failed");
+                }
               }
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition"
@@ -2171,7 +2316,7 @@ const Notes = () => {
                 </div>
               )}
 
-              <div className="pt-2">
+              <div className="pt-2 space-y-4">
                 <label className="inline-flex items-center gap-2 text-sm font-semibold cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -2184,6 +2329,26 @@ const Notes = () => {
                   <Pin size={15} className="text-amber-500 fill-amber-500" />{" "}
                   {t("pinned") || "Pinned"}
                 </label>
+
+                {/* Password lock — test only (plain text) */}
+                <div>
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <Lock size={12} /> Password lock (optional, test only)
+                  </label>
+                  <input
+                    type="password"
+                    value={form.password || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, password: e.target.value })
+                    }
+                    className={inputCls}
+                    placeholder="Leave empty for no lock"
+                    autoComplete="new-password"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    If set, opening this {form.type === "folder" ? "folder" : "item"} will require the password.
+                  </p>
+                </div>
               </div>
             </form>
 
@@ -2289,6 +2454,93 @@ const Notes = () => {
         </div>
       )}
 
+      {/* Password unlock (test only) */}
+      {pwdModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          onClick={() => {
+            setPwdModal(null);
+            setPwdInput("");
+            setPwdError("");
+          }}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/60">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500/10">
+                  <Lock size={18} className="text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Password required
+                  </h2>
+                  <p className="text-xs text-slate-500 truncate max-w-[200px]">
+                    {pwdModal.note.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPwdModal(null);
+                  setPwdInput("");
+                  setPwdError("");
+                }}
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-3">
+              <input
+                ref={pwdInputRef}
+                type="password"
+                value={pwdInput}
+                onChange={(e) => {
+                  setPwdInput(e.target.value);
+                  setPwdError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    confirmPassword();
+                  }
+                }}
+                className={inputCls}
+                placeholder="Enter password..."
+                autoComplete="current-password"
+              />
+              {pwdError && (
+                <p className="text-xs text-rose-500 font-medium">{pwdError}</p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700/60 flex justify-end gap-2 bg-slate-50/50 dark:bg-slate-800/50">
+              <button
+                type="button"
+                onClick={() => {
+                  setPwdModal(null);
+                  setPwdInput("");
+                  setPwdError("");
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmPassword}
+                className="px-5 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center gap-1.5"
+              >
+                <Unlock size={14} /> Unlock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Duplicate with rename + color */}
       {dupModal && (
         <div
@@ -2306,7 +2558,9 @@ const Notes = () => {
                   {dupModal.type === "folder" ? " folder" : ""}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Rename and choose a color ·{" "}
+                  {dupModal.type === "folder"
+                    ? "Copies folder + all nested folders & files · "
+                    : "Rename and choose a color · "}
                   <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-mono">
                     Ctrl+D
                   </kbd>
@@ -2375,6 +2629,24 @@ const Notes = () => {
                     />
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Lock size={12} /> Password (optional)
+                </label>
+                <input
+                  type="password"
+                  value={dupModal.password || ""}
+                  onChange={(e) =>
+                    setDupModal((prev) =>
+                      prev ? { ...prev, password: e.target.value } : prev,
+                    )
+                  }
+                  className={inputCls}
+                  placeholder="Leave empty for no lock"
+                  autoComplete="new-password"
+                />
               </div>
             </div>
 
