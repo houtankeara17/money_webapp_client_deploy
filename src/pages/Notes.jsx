@@ -36,8 +36,6 @@ import {
   Archive,
   Lock,
   Unlock,
-<<<<<<< HEAD
-=======
   Pencil,
   Bold,
   Italic,
@@ -46,7 +44,6 @@ import {
   List,
   ListOrdered,
   Type,
->>>>>>> 06698f9 (Update note page)
 } from "lucide-react";
 import useI18n from "../hooks/useI18n";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -222,10 +219,8 @@ const Notes = () => {
   const [scale, setScale] = useState(1);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showFilters, setShowFilters] = useState(false);
-<<<<<<< HEAD
-=======
   const [typeFilter, setTypeFilter] = useState(""); // folder | note | file | ""
->>>>>>> 06698f9 (Update note page)
+
 
   // Duplicate-with-rename modal
   const [dupModal, setDupModal] = useState(null); // { id, title, color, type } | null
@@ -237,8 +232,6 @@ const Notes = () => {
   const [pwdInput, setPwdInput] = useState("");
   const [pwdError, setPwdError] = useState("");
   const pwdInputRef = useRef(null);
-<<<<<<< HEAD
-=======
 
   // Folder item counts / sizes (loaded after list fetch)
   const [folderStats, setFolderStats] = useState({}); // { [id]: { total, folders, files, size } }
@@ -322,20 +315,15 @@ const Notes = () => {
       el.setSelectionRange(pos, pos);
     }, 0);
   };
->>>>>>> 06698f9 (Update note page)
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Don't hijack keys while typing in inputs/modals
       const tag = e.target?.tagName?.toLowerCase();
       const isTyping =
-<<<<<<< HEAD
         tag === "input" ||
         tag === "textarea" ||
         e.target?.isContentEditable;
-=======
-        tag === "input" || tag === "textarea" || e.target?.isContentEditable;
->>>>>>> 06698f9 (Update note page)
 
       if (e.key === "Escape") {
         if (lightbox.images.length) setLightbox({ images: [], index: 0 });
@@ -343,13 +331,9 @@ const Notes = () => {
           setPwdModal(null);
           setPwdInput("");
           setPwdError("");
-<<<<<<< HEAD
-        } else if (dupModal && !dupSaving) setDupModal(null);
-=======
         } else if (renameModal && !renameSaving) setRenameModal(null);
         else if (ctxMenu) setCtxMenu(null);
         else if (dupModal && !dupSaving) setDupModal(null);
->>>>>>> 06698f9 (Update note page)
         else if (showForm && !saving) setShowForm(false);
         else if (selectedIds.size) setSelectedIds(new Set());
         return;
@@ -381,9 +365,6 @@ const Notes = () => {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-<<<<<<< HEAD
-  }, [showForm, saving, lightbox, selectedIds, dupModal, dupSaving, items]);
-=======
   }, [
     showForm,
     saving,
@@ -397,7 +378,6 @@ const Notes = () => {
     renameSaving,
     ctxMenu,
   ]);
->>>>>>> 06698f9 (Update note page)
 
   const setViewMode = (v) => {
     setView(v);
@@ -420,7 +400,8 @@ const Notes = () => {
           const children = Array.isArray(data?.data?.items)
             ? data.data.items
             : [];
-          const total = data?.data?.pagination?.total ?? children.length;
+          const total =
+            data?.data?.pagination?.total ?? children.length;
           const folders = children.filter((c) => c.type === "folder").length;
           const files = Math.max(0, total - folders);
           const size = children.reduce(
@@ -449,17 +430,12 @@ const Notes = () => {
         if (search.trim()) params.search = search.trim();
 
         const { data } = await fetchNotesApi(params);
-<<<<<<< HEAD
-        setItems(Array.isArray(data?.data?.items) ? data.data.items : []);
-        setSelectedIds(new Set());
-=======
         const list = Array.isArray(data?.data?.items) ? data.data.items : [];
         setItems(list);
         setSelectedIds(new Set());
         // Load counts/sizes for folders in this view
         const foldersOnly = list.filter((i) => i.type === "folder");
         loadFolderStats(foldersOnly);
->>>>>>> 06698f9 (Update note page)
       } catch (err) {
         console.error("Notes fetch error:", err);
         toast.error(err.response?.data?.message || "Failed to load notes");
@@ -542,20 +518,6 @@ const Notes = () => {
     else openEditForm(note);
   };
 
-<<<<<<< HEAD
-  const confirmPassword = () => {
-    if (!pwdModal) return;
-    if (pwdInput === pwdModal.note.password) {
-      const { note, action } = pwdModal;
-      setPwdModal(null);
-      setPwdInput("");
-      setPwdError("");
-      if (action === "open") enterFolder(note);
-      else openEditForm(note);
-    } else {
-      setPwdError("Incorrect password");
-    }
-=======
   const confirmPassword = async () => {
     if (!pwdModal) return;
     if (pwdInput !== pwdModal.note.password) {
@@ -601,7 +563,6 @@ const Notes = () => {
     setPwdInput("");
     setPwdError("");
     setTimeout(() => pwdInputRef.current?.focus?.(), 50);
->>>>>>> 06698f9 (Update note page)
   };
 
   const handleOpenFolder = (folder) => {
@@ -692,16 +653,11 @@ const Notes = () => {
           label: l.label || "",
           tag: l.tag || "",
         })),
-<<<<<<< HEAD
-        // test only — plain text password lock
-        password: form.password || "",
-=======
         // Always send password (empty string removes lock on folder/note)
         password:
           form.password === undefined || form.password === null
             ? ""
             : String(form.password),
->>>>>>> 06698f9 (Update note page)
       };
 
       if (editing) {
@@ -832,13 +788,9 @@ const Notes = () => {
 
       try {
         await Promise.all(
-<<<<<<< HEAD
           idsToMove.map((id) =>
             updateNoteApi(id, { folderId: newFolderId }),
           ),
-=======
-          idsToMove.map((id) => updateNoteApi(id, { folderId: newFolderId })),
->>>>>>> 06698f9 (Update note page)
         );
         toast.success(
           idsToMove.length > 1
@@ -981,12 +933,8 @@ const Notes = () => {
     setDupSaving(true);
     try {
       // Place the copy in the same parent as the source
-<<<<<<< HEAD
       const destFolderId =
         source.folderId || currentFolder?._id || null;
-=======
-      const destFolderId = source.folderId || currentFolder?._id || null;
->>>>>>> 06698f9 (Update note page)
 
       await deepDuplicateFromItem(source, destFolderId, {
         title,
@@ -1009,8 +957,6 @@ const Notes = () => {
       toast.error(err.response?.data?.message || t("failed") || "Failed");
     } finally {
       setDupSaving(false);
-<<<<<<< HEAD
-=======
     }
   };
 
@@ -1037,13 +983,17 @@ const Notes = () => {
       await updateNoteApi(renameModal.id, { title });
       // Update local list + current folder title if needed
       setItems((prev) =>
-        prev.map((i) => (i._id === renameModal.id ? { ...i, title } : i)),
+        prev.map((i) =>
+          i._id === renameModal.id ? { ...i, title } : i,
+        ),
       );
       if (currentFolder?._id === renameModal.id) {
         setCurrentFolder((prev) => (prev ? { ...prev, title } : prev));
       }
       setBreadcrumbs((prev) =>
-        prev.map((b) => (b._id === renameModal.id ? { ...b, title } : b)),
+        prev.map((b) =>
+          b._id === renameModal.id ? { ...b, title } : b,
+        ),
       );
       toast.success("Renamed");
       setRenameModal(null);
@@ -1051,7 +1001,6 @@ const Notes = () => {
       toast.error(err.response?.data?.message || t("failed") || "Failed");
     } finally {
       setRenameSaving(false);
->>>>>>> 06698f9 (Update note page)
     }
   };
 
@@ -1308,8 +1257,6 @@ const Notes = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-<<<<<<< HEAD
-=======
   /** Compact type badge for file-manager style cards */
   const getTypeBadge = (note) => {
     if (note.type === "folder") {
@@ -1356,7 +1303,10 @@ const Notes = () => {
         typeLabel: "Image",
       };
     }
-    if (ft.includes("image") || /\.(png|jpe?g|gif|webp)$/i.test(title)) {
+    if (
+      ft.includes("image") ||
+      /\.(png|jpe?g|gif|webp)$/i.test(title)
+    ) {
       return {
         label: "IMG",
         bg: "bg-violet-500",
@@ -1386,7 +1336,6 @@ const Notes = () => {
     };
   };
 
->>>>>>> 06698f9 (Update note page)
   const colorClass = (c) =>
     COLORS.find((x) => x.id === c)?.card || COLORS[0].card;
 
@@ -1416,123 +1365,7 @@ const Notes = () => {
   const inputCls =
     "w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-all text-sm shadow-2xs";
 
-<<<<<<< HEAD
-  // ─── Folder Card (grid) – matches screenshot style ────────────────────────
-  const FolderCard = ({ note }) => {
-    const isSelected = selectedIds.has(note._id);
-    const isDropTarget = dragOverId === note._id && draggedId && draggedId !== note._id;
-    // Tint folder card with its color (still keep yellow folder icon)
-    const folderColorCls =
-      note.color && note.color !== "default"
-        ? colorClass(note.color)
-        : "bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80";
-    return (
-      <div
-        draggable
-        onDragStart={(e) => handleDragStart(e, note._id)}
-        onDragOver={(e) => handleDragOver(e, note._id)}
-        onDragLeave={(e) => handleDragLeave(e, note._id)}
-        onDrop={(e) => handleDrop(e, note._id)}
-        onDragEnd={handleDragEnd}
-        onClick={() => handleOpenFolder(note)}
-        className={`group relative rounded-2xl border p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center text-center min-h-[160px] ${folderColorCls} ${
-          isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""
-        } ${
-          draggedId === note._id
-            ? "opacity-30 scale-95 border-dashed border-teal-500"
-            : ""
-        } ${
-          isDropTarget
-            ? "ring-2 ring-amber-500 border-amber-500 bg-amber-50/80 dark:bg-amber-950/30 scale-[1.03] shadow-lg shadow-amber-500/20"
-            : ""
-        }`}
-      >
-        <div className="absolute top-2.5 left-2.5 z-10">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => toggleSelect(note._id, e)}
-            onClick={(e) => e.stopPropagation()}
-            className="rounded text-teal-600 h-4 w-4 cursor-pointer"
-          />
-        </div>
 
-        <div className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-0.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-          <button
-            type="button"
-            onClick={(e) => handleTogglePin(note._id, e)}
-            className={`p-1.5 rounded-lg transition ${
-              note.pinned
-                ? "text-amber-500"
-                : "text-slate-400 hover:text-amber-500"
-            }`}
-          >
-            {note.pinned ? (
-              <Pin size={13} className="fill-amber-500" />
-            ) : (
-              <PinOff size={13} />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmDel(note._id);
-            }}
-            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/40"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center pt-4 pb-2">
-          <div className="w-16 h-14 mb-3 relative">
-            {/* Yellow folder icon like the screenshot */}
-            <div className="absolute inset-0 rounded-lg bg-amber-400/90 shadow-md" />
-            <div className="absolute top-0 left-1 right-1 h-3 rounded-t-md bg-amber-500" />
-            <div className="absolute bottom-0 left-0 right-0 h-10 rounded-b-lg bg-gradient-to-b from-amber-300 to-amber-400" />
-            <Folder
-              size={28}
-              className="absolute inset-0 m-auto text-amber-700/40"
-              strokeWidth={1.5}
-            />
-          </div>
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate w-full px-1 flex items-center justify-center gap-1">
-            {note.password ? (
-              <Lock size={12} className="text-amber-600 shrink-0" />
-            ) : null}
-            {note.title}
-          </h3>
-          {note.pinned && (
-            <Pin size={11} className="text-amber-500 fill-amber-500 mt-1" />
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // ─── Create new folder card ───────────────────────────────────────────────
-  const CreateFolderCard = () => (
-    <button
-      type="button"
-      onClick={() => openCreate("folder")}
-      className="group relative rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-4 cursor-pointer hover:border-teal-400 hover:bg-teal-50/30 dark:hover:bg-teal-950/20 transition-all duration-200 flex flex-col items-center justify-center min-h-[160px] text-slate-400 hover:text-teal-600"
-    >
-      <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mb-3 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/40 transition">
-        <Plus size={22} />
-      </div>
-      <span className="text-sm font-semibold">Create new folder</span>
-    </button>
-  );
-
-  // ─── Note / File Card (grid) ──────────────────────────────────────────────
-  const NoteCard = ({ note }) => {
-    const isFile = note.type === "file";
-    const total = note.items?.length || 0;
-    const formattedDate = formatDate(note.updatedAt || note.createdAt);
-    const isSelected = selectedIds.has(note._id);
-
-=======
   // ─── Compact file-manager card (screenshot style) ─────────────────────────
   const CompactFileCard = ({ note }) => {
     const isFolder = note.type === "folder";
@@ -1544,7 +1377,6 @@ const Notes = () => {
       dragOverId === note._id && draggedId && draggedId !== note._id;
     const badge = getTypeBadge(note);
     const stats = folderStats[note._id];
->>>>>>> 06698f9 (Update note page)
     const imagesList =
       Array.isArray(note.images) && note.images.length > 0
         ? note.images
@@ -1698,312 +1530,6 @@ const Notes = () => {
         onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
         onDragEnd={handleDragEnd}
-<<<<<<< HEAD
-        onClick={() => openEdit(note)}
-        className={`group relative rounded-2xl border p-4 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between h-full min-h-[220px] backdrop-blur-md ${colorClass(
-          note.color,
-        )} ${isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""} ${
-=======
-        onClick={() => (isFolder ? handleOpenFolder(note) : openEdit(note))}
-        className={`group rounded-xl border px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition ${
-          isSelected
-            ? "bg-teal-50/50 dark:bg-teal-950/20 border-teal-300 dark:border-teal-700"
-            : "bg-white dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/80"
-        } ${
->>>>>>> 06698f9 (Update note page)
-          draggedId === note._id
-            ? "opacity-30 border-dashed border-teal-500"
-            : ""
-        } ${
-          isDropTarget && isFolder
-            ? "ring-2 ring-amber-500 border-amber-500 bg-amber-50/60 dark:bg-amber-950/20"
-            : isDropTarget
-              ? "ring-2 ring-teal-500 border-teal-500"
-              : ""
-        }`}
-      >
-<<<<<<< HEAD
-        <div className="absolute top-2.5 left-2.5 z-10">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => toggleSelect(note._id, e)}
-            onClick={(e) => e.stopPropagation()}
-            className="rounded text-teal-600 h-4 w-4 cursor-pointer"
-          />
-        </div>
-
-        <div>
-          {imagesList.length > 0 && (
-            <div className="relative overflow-hidden rounded-xl mb-3 h-32 w-full bg-slate-900/10 dark:bg-slate-900 group/img border border-slate-200/50 dark:border-slate-700/50 mt-5">
-              <img
-                src={imagesList[imgIndex]}
-                alt=""
-                className="w-full h-full object-cover transition-all duration-500"
-              />
-              {imagesList.length > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={prevImage}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all hover:bg-slate-900"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={nextImage}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-slate-900/60 text-white backdrop-blur-md opacity-0 group-hover/img:opacity-100 transition-all hover:bg-slate-900"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
-                    {imagesList.map((_, i) => (
-                      <span
-                        key={i}
-                        className={`h-1.5 rounded-full transition-all ${
-                          i === imgIndex
-                            ? "w-4 bg-teal-400"
-                            : "w-1.5 bg-white/60"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={(e) => openLightbox(imagesList, imgIndex, e)}
-                className="absolute top-2 right-2 p-1.5 rounded-xl bg-slate-900/70 backdrop-blur-md text-white opacity-0 group-hover/img:opacity-100 transition-all hover:scale-105"
-              >
-                <Eye size={14} />
-              </button>
-            </div>
-          )}
-
-          <div className="flex items-start justify-between gap-2 mb-2 mt-1">
-            <div className="flex items-center gap-2.5 min-w-0 pl-5">
-              <span className="text-lg p-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-xl shrink-0 shadow-2xs border border-slate-200/60 dark:border-slate-700/60">
-                {isFile ? (
-                  <Paperclip size={16} className="text-slate-500" />
-                ) : (
-                  note.icon || "📝"
-                )}
-              </span>
-              <h3 className="font-bold truncate text-sm text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-1">
-                {note.password ? (
-                  <Lock size={12} className="text-amber-600 shrink-0" />
-                ) : null}
-                {note.title}
-              </h3>
-            </div>
-
-            <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-0.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-              <button
-                type="button"
-                onClick={(e) => handleDuplicate(note._id, e)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-              >
-                <Copy size={13} />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => handleTogglePin(note._id, e)}
-                className={`p-1.5 rounded-lg transition ${
-                  note.pinned
-                    ? "text-amber-500"
-                    : "text-slate-400 hover:text-amber-500"
-                }`}
-              >
-                {note.pinned ? (
-                  <Pin size={13} className="fill-amber-500" />
-                ) : (
-                  <PinOff size={13} />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmDel(note._id);
-                }}
-                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/40 transition"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
-
-          {note.body ? (
-            <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 mb-2 whitespace-pre-wrap leading-relaxed px-1">
-              {note.body}
-            </p>
-          ) : null}
-
-          {total > 0 && (
-            <ul className="space-y-1 mb-2 bg-white/50 dark:bg-slate-900/40 backdrop-blur-xs p-2 rounded-xl border border-slate-200/50 dark:border-slate-700/30">
-              {note.items.slice(0, 2).map((item) => (
-                <li
-                  key={item._id || item.text}
-                  className="text-xs flex items-center gap-2"
-                >
-                  <button
-                    type="button"
-                    onClick={(e) =>
-                      item._id && handleToggleCheck(note._id, item._id, e)
-                    }
-                    className={`shrink-0 ${
-                      item.checked ? "text-teal-600" : "text-slate-400"
-                    }`}
-                  >
-                    {item.checked ? (
-                      <CheckCircle2 size={13} />
-                    ) : (
-                      <Circle size={13} />
-                    )}
-                  </button>
-                  <span
-                    className={`truncate ${
-                      item.checked
-                        ? "line-through text-slate-400"
-                        : "text-slate-700 dark:text-slate-200"
-                    }`}
-                  >
-                    {item.text}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {note.links && note.links.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {note.links.slice(0, 2).map((link, idx) => (
-                <a
-                  key={link._id || idx}
-                  href={link.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-[11px] font-medium border border-teal-500/20 transition"
-                >
-                  <ExternalLink size={10} />
-                  <span className="truncate max-w-[80px]">
-                    {link.label || link.url}
-                  </span>
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 mt-auto flex items-center justify-between">
-          <span className="font-medium bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 px-2 py-0.5 rounded-lg text-slate-600 dark:text-slate-300 text-[11px]">
-            {isFile ? "📄 File" : note.categoryTag || "Note"}
-          </span>
-          {formattedDate && (
-            <span className="text-[11px] text-slate-400">{formattedDate}</span>
-=======
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => toggleSelect(note._id, e)}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded text-teal-600 h-4 w-4 shrink-0 cursor-pointer"
-        />
-
-        <div className="text-slate-400 cursor-grab active:cursor-grabbing shrink-0 opacity-0 group-hover:opacity-100 transition">
-          <GripVertical size={14} />
-        </div>
-
-        <div className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700/60">
-          {isFolder ? (
-            <Folder size={18} className="text-amber-500" />
-          ) : isFile ? (
-            <Paperclip size={16} className="text-slate-500" />
-          ) : (
-            <span className="text-base">{note.icon || "📝"}</span>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate flex items-center gap-1">
-            {note.password ? (
-              <Lock size={12} className="text-amber-600 shrink-0" />
-            ) : null}
-            {note.title}
-          </h3>
-          <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-            <span>
-              {isFolder ? "Folder" : isFile ? "File" : note.categoryTag}
-            </span>
-            {formattedDate && <span>• {formattedDate}</span>}
-          </div>
-        </div>
-
-        {note.pinned && (
-          <Pin size={13} className="text-amber-500 fill-amber-500 shrink-0" />
-        )}
-
-        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
-          {!isFolder && (
-            <button
-              type="button"
-              onClick={(e) => handleDuplicate(note._id, e)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700"
-            >
-              <Copy size={13} />
-            </button>
->>>>>>> 06698f9 (Update note page)
-          )}
-          <button
-            type="button"
-            onClick={(e) => handleTogglePin(note._id, e)}
-            className={`p-1.5 rounded-lg ${
-              note.pinned
-                ? "text-amber-500"
-                : "text-slate-400 hover:text-amber-500"
-            }`}
-          >
-            {note.pinned ? (
-              <Pin size={13} className="fill-amber-500" />
-            ) : (
-              <PinOff size={13} />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setConfirmDel(note._id);
-            }}
-            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-<<<<<<< HEAD
-  // ─── List / Table row ─────────────────────────────────────────────────────
-  const ListRow = ({ note }) => {
-    const isFolder = note.type === "folder";
-    const isFile = note.type === "file";
-    const formattedDate = formatDate(note.updatedAt || note.createdAt);
-    const isSelected = selectedIds.has(note._id);
-    const isDropTarget =
-      dragOverId === note._id && draggedId && draggedId !== note._id;
-
-    return (
-      <div
-        draggable
-        onDragStart={(e) => handleDragStart(e, note._id)}
-        onDragOver={(e) => handleDragOver(e, note._id)}
-        onDragLeave={(e) => handleDragLeave(e, note._id)}
-        onDrop={(e) => handleDrop(e, note._id)}
-        onDragEnd={handleDragEnd}
         onClick={() => (isFolder ? handleOpenFolder(note) : openEdit(note))}
         className={`group rounded-xl border px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition ${
           isSelected
@@ -2102,36 +1628,7 @@ const Notes = () => {
     );
   };
 
-  // ─── Table view (like screenshot) ─────────────────────────────────────────
-  const TableView = ({ list }) => (
-    <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-800/80">
-      <div className="grid grid-cols-[40px_1fr_140px_100px_140px_80px] gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200/80 dark:border-slate-700/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            checked={
-              list.length > 0 && selectedIds.size === list.length
-            }
-            onChange={toggleSelectAll}
-            className="rounded text-teal-600 h-4 w-4 cursor-pointer"
-          />
-        </div>
-        <div>File name</div>
-        <div>Date added</div>
-        <div>Size</div>
-        <div>Last update</div>
-        <div className="text-right">Actions</div>
-      </div>
-      <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
-        {list.map((note) => {
-          const isFolder = note.type === "folder";
-          const isFile = note.type === "file";
-          const isSelected = selectedIds.has(note._id);
-          const created = formatDate(note.createdAt);
-          const updated = formatDate(note.updatedAt || note.createdAt);
-          const isDropTarget =
-            dragOverId === note._id && draggedId && draggedId !== note._id;
-=======
+
   // ─── Table view (file manager style) ──────────────────────────────────────
   const TableView = ({ list }) => (
     <div className="rounded-xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-800/90">
@@ -2165,7 +1662,6 @@ const Notes = () => {
             (draggedId &&
               selectedIds.has(note._id) &&
               selectedIds.has(draggedId));
->>>>>>> 06698f9 (Update note page)
 
           return (
             <div
@@ -2179,21 +1675,6 @@ const Notes = () => {
               onClick={() =>
                 isFolder ? handleOpenFolder(note) : openEdit(note)
               }
-<<<<<<< HEAD
-              className={`grid grid-cols-[40px_1fr_140px_100px_140px_80px] gap-2 px-4 py-3 items-center cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition group ${
-                isSelected
-                  ? "bg-teal-50/40 dark:bg-teal-950/15"
-                  : ""
-              } ${
-                isDropTarget && isFolder
-                  ? "bg-amber-50/70 dark:bg-amber-950/25 ring-1 ring-inset ring-amber-400"
-                  : isDropTarget
-                    ? "bg-teal-50/50 dark:bg-teal-950/20"
-                    : ""
-              } ${
-                draggedId === note._id ? "opacity-30" : ""
-              }`}
-=======
               onContextMenu={(e) => {
                 e.preventDefault();
                 setCtxMenu({ x: e.clientX, y: e.clientY, note });
@@ -2205,46 +1686,12 @@ const Notes = () => {
                   ? "bg-amber-50/70 dark:bg-amber-950/25 ring-1 ring-inset ring-amber-400"
                   : ""
               } ${isBeingDragged ? "opacity-30" : ""}`}
->>>>>>> 06698f9 (Update note page)
             >
               <div onClick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={(e) => toggleSelect(note._id, e)}
-<<<<<<< HEAD
-                  className="rounded text-teal-600 h-4 w-4 cursor-pointer"
-                />
-              </div>
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/50">
-                  {isFolder ? (
-                    <Folder size={16} className="text-amber-500" />
-                  ) : isFile ? (
-                    <File size={15} className="text-slate-500" />
-                  ) : (
-                    <span className="text-sm">{note.icon || "📝"}</span>
-                  )}
-                </div>
-                <span className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate flex items-center gap-1">
-                  {note.password ? (
-                    <Lock size={12} className="text-amber-600 shrink-0" />
-                  ) : null}
-                  {note.title}
-                </span>
-                {note.pinned && (
-                  <Pin
-                    size={12}
-                    className="text-amber-500 fill-amber-500 shrink-0"
-                  />
-                )}
-              </div>
-              <div className="text-xs text-slate-500 truncate">
-                {created || "—"}
-              </div>
-              <div className="text-xs text-slate-500">
-                {isFolder ? "—" : formatSize(note.fileSize)}
-=======
                   className="rounded text-violet-600 h-4 w-4 cursor-pointer"
                 />
               </div>
@@ -2280,23 +1727,10 @@ const Notes = () => {
                     ? formatSize(folderStats[note._id].size)
                     : "…"
                   : formatSize(note.fileSize)}
->>>>>>> 06698f9 (Update note page)
               </div>
               <div className="text-xs text-slate-500 truncate">
                 {updated || "—"}
               </div>
-<<<<<<< HEAD
-              <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                {!isFolder && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleDuplicate(note._id, e)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600"
-                  >
-                    <Copy size={13} />
-                  </button>
-                )}
-=======
               <div>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/15 text-violet-600 dark:text-violet-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
@@ -2311,7 +1745,6 @@ const Notes = () => {
                 >
                   <Pencil size={13} />
                 </button>
->>>>>>> 06698f9 (Update note page)
                 <button
                   type="button"
                   onClick={(e) => {
@@ -2330,12 +1763,10 @@ const Notes = () => {
     </div>
   );
 
+
   const renderList = (list) => {
     if (view === "list") {
       return (
-<<<<<<< HEAD
-        <div className="space-y-2 w-full">
-=======
         <div className="space-y-1.5 w-full">
           <div className="flex items-center gap-2 px-1 mb-2">
             <input
@@ -2348,7 +1779,6 @@ const Notes = () => {
               Select all ({list.length})
             </span>
           </div>
->>>>>>> 06698f9 (Update note page)
           {list.map((note) => (
             <ListRow key={note._id} note={note} />
           ))}
@@ -2358,27 +1788,11 @@ const Notes = () => {
     if (view === "table") {
       return <TableView list={list} />;
     }
-<<<<<<< HEAD
-    // Grid: folders first as folder cards, then notes/files
-=======
     // Grid — compact file-manager cards (folders + notes together)
->>>>>>> 06698f9 (Update note page)
     const folderItems = list.filter((n) => n.type === "folder");
     const otherItems = list.filter((n) => n.type !== "folder");
     return (
       <div className="space-y-6 w-full">
-<<<<<<< HEAD
-        {(folderItems.length > 0 || !currentFolder) && (
-          <div>
-            {folderItems.length > 0 && (
-              <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-                Folders
-              </h3>
-            )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-              {folderItems.map((n) => (
-                <FolderCard key={n._id} note={n} />
-=======
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -2400,24 +1814,11 @@ const Notes = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {folderItems.map((n) => (
                 <CompactFileCard key={n._id} note={n} />
->>>>>>> 06698f9 (Update note page)
               ))}
               <CreateFolderCard />
             </div>
           </div>
         )}
-<<<<<<< HEAD
-        {otherItems.length > 0 && (
-          <div>
-            {folderItems.length > 0 && (
-              <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-                Files & Notes
-              </h3>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {otherItems.map((n) => (
-                <NoteCard key={n._id} note={n} />
-=======
 
         {otherItems.length > 0 && (
           <div>
@@ -2427,7 +1828,6 @@ const Notes = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {otherItems.map((n) => (
                 <CompactFileCard key={n._id} note={n} />
->>>>>>> 06698f9 (Update note page)
               ))}
             </div>
           </div>
@@ -2436,14 +1836,6 @@ const Notes = () => {
     );
   };
 
-<<<<<<< HEAD
-  const activeFilterCount = [catFilter, pinFilter, search.trim()].filter(
-    Boolean,
-  ).length;
-
-  return (
-    <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-[1700px] mx-auto">
-=======
   const activeFilterCount = [
     catFilter,
     pinFilter,
@@ -2460,7 +1852,6 @@ const Notes = () => {
 
   return (
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-[1700px] mx-auto ">
->>>>>>> 06698f9 (Update note page)
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
@@ -2475,12 +1866,7 @@ const Notes = () => {
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1.5 font-medium pl-1">
             {items.length} {t("entries") || "entries"}
             {folders.length > 0 && ` · ${folders.length} folders`}
-<<<<<<< HEAD
             {pinned.length > 0 && ` · ${pinned.length} ${t("pinned") || "pinned"}`}
-=======
-            {pinned.length > 0 &&
-              ` · ${pinned.length} ${t("pinned") || "pinned"}`}
->>>>>>> 06698f9 (Update note page)
           </p>
         </div>
 
@@ -2513,10 +1899,7 @@ const Notes = () => {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition"
             title="Export selected rows, or all if none selected"
           >
-            <Download size={14} />{" "}
-            {selectedIds.size > 0
-              ? `Export (${selectedIds.size})`
-              : t("export") || "Export"}
+            <Download size={14} /> {selectedIds.size > 0 ? `Export (${selectedIds.size})` : (t("export") || "Export")}
           </button>
 
           <button
@@ -2534,13 +1917,7 @@ const Notes = () => {
             className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/30 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
           >
             <Trash2 size={15} />
-<<<<<<< HEAD
             <span className="hidden sm:inline">{t("deleteAll") || "Delete All"}</span>
-=======
-            <span className="hidden sm:inline">
-              {t("deleteAll") || "Delete All"}
-            </span>
->>>>>>> 06698f9 (Update note page)
           </button>
 
           <button
@@ -2634,82 +2011,6 @@ const Notes = () => {
       </div>
 
       {showFilters && (
-<<<<<<< HEAD
-        <div className="flex flex-wrap gap-3 mb-6 p-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
-          <select
-            value={catFilter}
-            onChange={(e) => setCatFilter(e.target.value)}
-            className={`${inputCls} w-auto min-w-[140px]`}
-          >
-            <option value="">All categories</option>
-            {NOTE_CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.emoji} {tEnum(c.id)}
-              </option>
-            ))}
-          </select>
-          <select
-            value={pinFilter}
-            onChange={(e) => setPinFilter(e.target.value)}
-            className={`${inputCls} w-auto min-w-[120px]`}
-          >
-            <option value="">All</option>
-            <option value="true">Pinned</option>
-            <option value="false">Unpinned</option>
-          </select>
-          {activeFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setCatFilter("");
-                setPinFilter("");
-                setSearch("");
-              }}
-              className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20"
-            >
-              <X size={14} /> Clear
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Multi-select action bar */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/95 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 backdrop-blur-md">
-          <span className="text-sm font-semibold">
-            {selectedIds.size} Files Selected
-          </span>
-          <div className="w-px h-5 bg-slate-600" />
-          <button
-            type="button"
-            onClick={async () => {
-              const ids = Array.from(selectedIds);
-              if (ids.length === 1) {
-                openDuplicateModal(ids[0]);
-              } else if (ids.length > 1) {
-                // Multi: deep-duplicate each (folders include nested contents)
-                try {
-                  for (const id of ids) {
-                    const source = items.find((i) => i._id === id);
-                    if (!source) continue;
-                    const destFolderId =
-                      source.folderId || currentFolder?._id || null;
-                    await deepDuplicateFromItem(source, destFolderId, {
-                      title: `${source.title} (copy)`,
-                    });
-                  }
-                  toast.success(`Duplicated ${ids.length} items`);
-                  setSelectedIds(new Set());
-                  fetchData({ silent: true });
-                } catch {
-                  toast.error(t("failed") || "Failed");
-                }
-              }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition"
-            title="Duplicate (Ctrl/Cmd+D to rename)"
-          >
-=======
         <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/80 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -2732,9 +2033,7 @@ const Notes = () => {
           </div>
 
           <div>
-            <p className="text-[11px] text-slate-400 mb-1.5 font-medium">
-              Type
-            </p>
+            <p className="text-[11px] text-slate-400 mb-1.5 font-medium">Type</p>
             <div className="flex flex-wrap gap-1.5">
               <button
                 type="button"
@@ -2790,7 +2089,9 @@ const Notes = () => {
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => setCatFilter((v) => (v === c.id ? "" : c.id))}
+                  onClick={() =>
+                    setCatFilter((v) => (v === c.id ? "" : c.id))
+                  }
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                     catFilter === c.id
                       ? "bg-teal-600 text-white border-teal-600"
@@ -2840,12 +2141,19 @@ const Notes = () => {
           <div className="w-px h-5 bg-slate-600" />
           <button
             type="button"
+            onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition"
+            title="Export selected"
+          >
+            <Download size={14} /> Export
+          </button>
+          <button
+            type="button"
             onClick={async () => {
               const ids = Array.from(selectedIds);
               if (ids.length === 1) {
                 openDuplicateModal(ids[0]);
               } else if (ids.length > 1) {
-                // Multi: deep-duplicate each (folders include nested contents)
                 try {
                   for (const id of ids) {
                     const source = items.find((i) => i._id === id);
@@ -2867,7 +2175,6 @@ const Notes = () => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition"
             title="Duplicate (Ctrl/Cmd+D to rename)"
           >
->>>>>>> 06698f9 (Update note page)
             <Copy size={14} /> Duplicate
           </button>
           <button
@@ -2887,23 +2194,6 @@ const Notes = () => {
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* Create / Edit Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div
-            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-slate-800 shadow-2xl border border-slate-200 dark:border-slate-700"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/60 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                {editing
-                  ? t("edit") || "Edit"
-                  : form.type === "folder"
-                    ? t("newFolder") || "New Folder"
-                    : t("addNote") || "Add Note"}
-              </h2>
-=======
       {/* Create / Edit Modal — teal light/dark + notes toolbar */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-sm">
@@ -2932,10 +2222,7 @@ const Notes = () => {
                 }`}
                 title="Pin"
               >
-                <Pin
-                  size={15}
-                  className={form.pinned ? "fill-amber-500" : ""}
-                />
+                <Pin size={15} className={form.pinned ? "fill-amber-500" : ""} />
               </button>
 
               <div className="flex items-center gap-1 px-1">
@@ -2978,16 +2265,12 @@ const Notes = () => {
 
               <div className="flex-1" />
 
->>>>>>> 06698f9 (Update note page)
               <button
                 type="button"
+                disabled={saving}
                 onClick={() => setShowForm(false)}
-<<<<<<< HEAD
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700"
-=======
                 className="p-2 rounded-lg text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-700"
                 title="Close"
->>>>>>> 06698f9 (Update note page)
               >
                 <X size={16} />
               </button>
@@ -3001,36 +2284,6 @@ const Notes = () => {
               </button>
             </div>
 
-<<<<<<< HEAD
-            <form
-              id="note-modal-form"
-              onSubmit={handleSubmit}
-              className="px-6 py-5 space-y-5"
-            >
-              {/* Tabs – hide media/checklist for pure folders if desired, but keep for flexibility */}
-              {form.type !== "folder" && (
-                <div className="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/80">
-                  {["content", "checklist", "media"].map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setFormTab(tab)}
-                      className={`flex-1 py-2 rounded-lg text-xs font-semibold capitalize transition ${
-                        formTab === tab
-                          ? "bg-white dark:bg-slate-700 text-teal-600 shadow-sm"
-                          : "text-slate-500 hover:text-slate-700"
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {(formTab === "content" || form.type === "folder") && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-=======
             {/* Formatting toolbar (real notes) */}
             {form.type !== "folder" && formTab === "content" && (
               <div className="flex flex-wrap items-center gap-0.5 px-3 py-1.5 border-b border-slate-100 dark:border-slate-700/80 bg-white dark:bg-slate-800">
@@ -3065,11 +2318,11 @@ const Notes = () => {
               onSubmit={handleSubmit}
               className="px-5 sm:px-6 py-5 space-y-5 overflow-y-auto flex-1 bg-white dark:bg-slate-800"
             >
+
               {(formTab === "content" || form.type === "folder") && (
                 <>
                   {/* Type selector — hide when creating folder via New Folder button */}
                   {!(form.type === "folder" && !editing) && (
->>>>>>> 06698f9 (Update note page)
                     <div>
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
                         {t("entryType") || "Type"}
@@ -3100,36 +2353,6 @@ const Notes = () => {
                         </option>
                       </select>
                     </div>
-<<<<<<< HEAD
-                    {form.type !== "folder" && (
-                      <div>
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                          {t("chooseIcon") || "Icon"}
-                        </label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {ICONS.map((ic) => (
-                            <button
-                              key={ic}
-                              type="button"
-                              onClick={() => setForm({ ...form, icon: ic })}
-                              className={`w-8 h-8 rounded-xl text-sm flex items-center justify-center transition ${
-                                form.icon === ic
-                                  ? "bg-teal-50 border-2 border-teal-500 scale-105"
-                                  : "bg-slate-50 border"
-                              }`}
-                            >
-                              {ic}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
-                      {t("title") || "Title"}
-=======
                   )}
 
                   <div>
@@ -3137,7 +2360,6 @@ const Notes = () => {
                       {form.type === "folder"
                         ? "Folder name"
                         : t("title") || "Title"}
->>>>>>> 06698f9 (Update note page)
                     </label>
                     <input
                       required
@@ -3154,13 +2376,6 @@ const Notes = () => {
                     />
                   </div>
 
-<<<<<<< HEAD
-                  {/* Folders: optional description only */}
-                  {form.type === "folder" ? (
-                    <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
-                        Description (optional)
-=======
                   {/* Emoji / icon picker */}
                   <div>
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">
@@ -3189,7 +2404,6 @@ const Notes = () => {
                     <div>
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
                         {t("content") || "Content"}
->>>>>>> 06698f9 (Update note page)
                       </label>
                       <textarea
                         ref={bodyRef}
@@ -3197,60 +2411,16 @@ const Notes = () => {
                         onChange={(e) =>
                           setForm({ ...form, body: e.target.value })
                         }
-<<<<<<< HEAD
-                        rows={2}
-                        className={`${inputCls} leading-relaxed`}
-                        placeholder="Optional description for this folder..."
-=======
                         rows={8}
                         className={`${inputCls} leading-relaxed min-h-[160px] font-normal`}
                         placeholder={
                           t("writeNoteBody") ||
                           "Write your note… Use the toolbar for titles, lists, links"
                         }
->>>>>>> 06698f9 (Update note page)
                       />
                     </div>
-                  ) : (
-                    formTab === "content" && (
-                      <div>
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
-                          {t("content") || "Content"}
-                        </label>
-                        <textarea
-                          value={form.body}
-                          onChange={(e) =>
-                            setForm({ ...form, body: e.target.value })
-                          }
-                          rows={4}
-                          className={`${inputCls} leading-relaxed`}
-                          placeholder={t("writeNoteBody") || "Write your note..."}
-                        />
-                      </div>
-                    )
                   )}
 
-<<<<<<< HEAD
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
-                        {t("category") || "Category"}
-                      </label>
-                      <select
-                        value={form.categoryTag}
-                        onChange={(e) =>
-                          setForm({ ...form, categoryTag: e.target.value })
-                        }
-                        className={inputCls}
-                      >
-                        {NOTE_CATEGORIES.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.emoji} {tEnum(c.id)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-=======
                   <div
                     className={`grid gap-4 ${
                       form.type === "folder"
@@ -3278,7 +2448,6 @@ const Notes = () => {
                         </select>
                       </div>
                     )}
->>>>>>> 06698f9 (Update note page)
 
                     <div>
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">
@@ -3543,25 +2712,6 @@ const Notes = () => {
                   {t("pinned") || "Pinned"}
                 </label>
 
-<<<<<<< HEAD
-                {/* Password lock — test only (plain text) */}
-                <div>
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                    <Lock size={12} /> Password lock (optional, test only)
-                  </label>
-                  <input
-                    type="password"
-                    value={form.password || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
-                    }
-                    className={inputCls}
-                    placeholder="Leave empty for no lock"
-                    autoComplete="new-password"
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    If set, opening this {form.type === "folder" ? "folder" : "item"} will require the password.
-=======
                 {/* Password — can set, change, or remove */}
                 <div>
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
@@ -3609,7 +2759,6 @@ const Notes = () => {
                     Set a password to lock this{" "}
                     {form.type === "folder" ? "folder" : "item"}. Removing a
                     saved password requires entering it first.
->>>>>>> 06698f9 (Update note page)
                   </p>
                 </div>
               </div>
@@ -3629,19 +2778,7 @@ const Notes = () => {
                 onClick={() => setShowForm(false)}
                 className="font-semibold text-slate-500 hover:text-teal-600"
               >
-<<<<<<< HEAD
-                {t("cancel") || "Cancel"}
-              </button>
-              <button
-                type="submit"
-                form="note-modal-form"
-                disabled={saving}
-                className="px-5 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-md shadow-teal-500/20"
-              >
-                {saving ? t("loading") || "Saving..." : t("save") || "Save"}
-=======
                 Close
->>>>>>> 06698f9 (Update note page)
               </button>
             </div>
           </div>
@@ -3728,8 +2865,6 @@ const Notes = () => {
         </div>
       )}
 
-<<<<<<< HEAD
-=======
       {/* Context menu */}
       {ctxMenu && (
         <>
@@ -3880,7 +3015,6 @@ const Notes = () => {
         </div>
       )}
 
->>>>>>> 06698f9 (Update note page)
       {/* Password unlock (test only) */}
       {pwdModal && (
         <div
@@ -3902,12 +3036,6 @@ const Notes = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-<<<<<<< HEAD
-                    Password required
-                  </h2>
-                  <p className="text-xs text-slate-500 truncate max-w-[200px]">
-                    {pwdModal.note.title}
-=======
                     {pwdModal.action === "remove"
                       ? "Confirm to remove password"
                       : "Password required"}
@@ -3916,7 +3044,6 @@ const Notes = () => {
                     {pwdModal.action === "remove"
                       ? "Enter current password to unlock"
                       : pwdModal.note.title}
->>>>>>> 06698f9 (Update note page)
                   </p>
                 </div>
               </div>
@@ -3970,11 +3097,6 @@ const Notes = () => {
               <button
                 type="button"
                 onClick={confirmPassword}
-<<<<<<< HEAD
-                className="px-5 py-2 rounded-xl bg-teal-600 text-white text-xs font-bold flex items-center gap-1.5"
-              >
-                <Unlock size={14} /> Unlock
-=======
                 className={`px-5 py-2 rounded-xl text-white text-xs font-bold flex items-center gap-1.5 ${
                   pwdModal.action === "remove"
                     ? "bg-rose-600 hover:bg-rose-500"
@@ -3990,7 +3112,6 @@ const Notes = () => {
                     <Unlock size={14} /> Unlock
                   </>
                 )}
->>>>>>> 06698f9 (Update note page)
               </button>
             </div>
           </div>
@@ -4164,26 +3285,6 @@ const Notes = () => {
             currentFolder
               ? "This folder is empty. Create a note or subfolder."
               : t("noDataHint") || "Create your first note or folder."
-<<<<<<< HEAD
-          }
-          action={
-            <div className="flex gap-2">
-              <button
-                onClick={() => openCreate("folder")}
-                className="px-4 py-2 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20 text-sm font-semibold"
-              >
-                <FolderPlus size={15} className="inline mr-1.5" />
-                New Folder
-              </button>
-              <button
-                onClick={() => openCreate("note")}
-                className="px-4 py-2 rounded-xl bg-teal-600 text-white text-sm font-semibold"
-              >
-                {t("addNote") || "Add Note"}
-              </button>
-            </div>
-=======
->>>>>>> 06698f9 (Update note page)
           }
           action={
             <div className="flex gap-2">
@@ -4222,23 +3323,12 @@ const Notes = () => {
           )}
           {displayUnpinned.length > 0 && pinFilter !== "true" && (
             <div>
-<<<<<<< HEAD
-              {pinned.length > 0 && pinFilter === "" && (
+              {displayPinned.length > 0 && pinFilter === "" && typeFilter === "" && (
                 <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">
-                  {t("others") || "Others"}
+                  All files
                 </h2>
               )}
-              {renderList(unpinned)}
-=======
-              {displayPinned.length > 0 &&
-                pinFilter === "" &&
-                typeFilter === "" && (
-                  <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">
-                    All files
-                  </h2>
-                )}
               {renderList(displayUnpinned)}
->>>>>>> 06698f9 (Update note page)
             </div>
           )}
         </>
