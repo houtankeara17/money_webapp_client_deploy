@@ -1171,6 +1171,9 @@ const Notes = () => {
           setShowForm(false);
           setEditing(null);
         }
+        if (viewNote && viewNote._id === confirmDel) {
+          setViewNote(null);
+        }
         // If we deleted a folder that is in the breadcrumb path, navigate up
         if (
           currentFolder &&
@@ -1181,6 +1184,10 @@ const Notes = () => {
           setBreadcrumbs([]);
         }
       }
+      if (confirmDel === "selected" && viewNote && selectedIds.has(viewNote._id)) {
+        setViewNote(null);
+      }
+      if (confirmDel === "all") setViewNote(null);
       setConfirmDel(null);
       await fetchData({ silent: true });
     } catch {
@@ -1294,6 +1301,35 @@ const Notes = () => {
     setLightbox({ images, index: startIndex });
     setScale(1);
   };
+
+  /**
+   * Touch swipe helpers for mobile image carousels / lightbox.
+   * Threshold ~40px horizontal, ignore mostly-vertical scrolls.
+   */
+  const swipeRef = useRef({ x: 0, y: 0, active: false });
+
+  const makeSwipeHandlers = (onSwipeLeft, onSwipeRight) => ({
+    onTouchStart: (e) => {
+      const t = e.touches?.[0];
+      if (!t) return;
+      swipeRef.current = { x: t.clientX, y: t.clientY, active: true };
+    },
+    onTouchEnd: (e) => {
+      if (!swipeRef.current.active) return;
+      swipeRef.current.active = false;
+      const t = e.changedTouches?.[0];
+      if (!t) return;
+      const dx = t.clientX - swipeRef.current.x;
+      const dy = t.clientY - swipeRef.current.y;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+      e.stopPropagation?.();
+      if (dx < 0) onSwipeLeft?.();
+      else onSwipeRight?.();
+    },
+    onTouchCancel: () => {
+      swipeRef.current.active = false;
+    },
+  });
 
   const formatDate = (dateString) => {
     if (!dateString) return null;
@@ -1603,13 +1639,31 @@ const Notes = () => {
           </button>
         </div>
 
-        {/* Image slider or type badge */}
+        {/* Image slider or type badge — swipe on mobile */}
         {imagesList.length > 0 ? (
-          <div className="relative h-36 bg-slate-100 dark:bg-slate-900 overflow-hidden">
+          <div
+            className="relative h-36 bg-slate-100 dark:bg-slate-900 overflow-hidden touch-pan-y"
+            {...(imagesList.length > 1
+              ? makeSwipeHandlers(
+                  () =>
+                    setCardSlide((prev) => ({
+                      ...prev,
+                      [note._id]: (safeIdx + 1) % imagesList.length,
+                    })),
+                  () =>
+                    setCardSlide((prev) => ({
+                      ...prev,
+                      [note._id]:
+                        (safeIdx - 1 + imagesList.length) % imagesList.length,
+                    })),
+                )
+              : {})}
+          >
             <img
               src={imagesList[safeIdx]}
               alt=""
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover select-none"
+              draggable={false}
               onClick={(e) => openLightbox(imagesList, safeIdx, e)}
             />
             {imagesList.length > 1 && (
@@ -1624,7 +1678,7 @@ const Notes = () => {
                         (safeIdx - 1 + imagesList.length) % imagesList.length,
                     }));
                   }}
-                  className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/40 text-white hover:bg-black/60"
+                  className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/40 text-white hover:bg-black/60 hidden sm:flex"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -1637,7 +1691,7 @@ const Notes = () => {
                       [note._id]: (safeIdx + 1) % imagesList.length,
                     }));
                   }}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/40 text-white hover:bg-black/60"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/40 text-white hover:bg-black/60 hidden sm:flex"
                 >
                   <ChevronRight size={14} />
                 </button>
@@ -3074,11 +3128,30 @@ const Notes = () => {
                 const idx = cardSlide[`view-${viewNote._id}`] || 0;
                 const safe = idx % imgs.length;
                 return (
-                  <div className="relative rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                  <div
+                    className="relative rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 touch-pan-y"
+                    {...(imgs.length > 1
+                      ? makeSwipeHandlers(
+                          () =>
+                            setCardSlide((p) => ({
+                              ...p,
+                              [`view-${viewNote._id}`]:
+                                (safe + 1) % imgs.length,
+                            })),
+                          () =>
+                            setCardSlide((p) => ({
+                              ...p,
+                              [`view-${viewNote._id}`]:
+                                (safe - 1 + imgs.length) % imgs.length,
+                            })),
+                        )
+                      : {})}
+                  >
                     <img
                       src={imgs[safe]}
                       alt=""
-                      className="w-full max-h-64 object-contain cursor-zoom-in"
+                      className="w-full max-h-64 object-contain cursor-zoom-in select-none"
+                      draggable={false}
                       onClick={(e) => openLightbox(imgs, safe, e)}
                     />
                     {imgs.length > 1 && (
@@ -3092,7 +3165,7 @@ const Notes = () => {
                                 (safe - 1 + imgs.length) % imgs.length,
                             }))
                           }
-                          className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white hidden sm:flex"
                         >
                           <ChevronLeft size={18} />
                         </button>
@@ -3105,7 +3178,7 @@ const Notes = () => {
                                 (safe + 1) % imgs.length,
                             }))
                           }
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white hidden sm:flex"
                         >
                           <ChevronRight size={18} />
                         </button>
@@ -3239,7 +3312,7 @@ const Notes = () => {
         </div>
       )}
 
-      {/* Lightbox */}
+      {/* Lightbox — swipe left/right on mobile */}
       {lightbox.images.length > 0 && (
         <div
           onClick={() => setLightbox({ images: [], index: 0 })}
@@ -3248,6 +3321,26 @@ const Notes = () => {
           <div
             onClick={(e) => e.stopPropagation()}
             className="relative max-w-5xl w-full flex flex-col items-center justify-center"
+            {...(lightbox.images.length > 1
+              ? makeSwipeHandlers(
+                  () =>
+                    setLightbox((prev) => ({
+                      ...prev,
+                      index:
+                        prev.index === prev.images.length - 1
+                          ? 0
+                          : prev.index + 1,
+                    })),
+                  () =>
+                    setLightbox((prev) => ({
+                      ...prev,
+                      index:
+                        prev.index === 0
+                          ? prev.images.length - 1
+                          : prev.index - 1,
+                    })),
+                )
+              : {})}
           >
             <div className="absolute top-4 right-4 flex items-center gap-2 bg-slate-900/80 p-2 rounded-2xl border border-slate-700 z-20">
               <button
@@ -3284,17 +3377,18 @@ const Notes = () => {
                         : prev.index - 1,
                   }))
                 }
-                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-slate-900/80 text-white border border-slate-700 hover:bg-slate-800 z-20"
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-slate-900/80 text-white border border-slate-700 hover:bg-slate-800 z-20 hidden sm:flex"
               >
                 <ChevronLeft size={20} />
               </button>
             )}
 
-            <div className="overflow-auto max-h-[80vh] max-w-full p-6 flex items-center justify-center">
+            <div className="overflow-auto max-h-[80vh] max-w-full p-6 flex items-center justify-center touch-pan-y">
               <img
                 src={lightbox.images[lightbox.index]}
                 alt=""
-                className="transition-transform duration-200 max-h-[75vh] object-contain rounded-2xl shadow-2xl"
+                draggable={false}
+                className="transition-transform duration-200 max-h-[75vh] object-contain rounded-2xl shadow-2xl select-none"
                 style={{ transform: `scale(${scale})` }}
               />
             </div>
