@@ -220,6 +220,9 @@ const Notes = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [typeFilter, setTypeFilter] = useState(""); // folder | note | file | ""
+  // Notebook view (read-only) — click note to view, modal only for create/edit
+  const [viewNote, setViewNote] = useState(null);
+  const [cardSlide, setCardSlide] = useState({}); // { [noteId]: imageIndex }
 
 
   // Duplicate-with-rename modal
@@ -362,7 +365,8 @@ const Notes = () => {
           setPwdModal(null);
           setPwdInput("");
           setPwdError("");
-        } else if (renameModal && !renameSaving) setRenameModal(null);
+        } else if (viewNote) setViewNote(null);
+        else if (renameModal && !renameSaving) setRenameModal(null);
         else if (ctxMenu) setCtxMenu(null);
         else if (dupModal && !dupSaving) setDupModal(null);
         else if (showForm && !saving) setShowForm(false);
@@ -408,6 +412,7 @@ const Notes = () => {
     renameModal,
     renameSaving,
     ctxMenu,
+    viewNote,
   ]);
 
   const setViewMode = (v) => {
@@ -537,6 +542,10 @@ const Notes = () => {
   };
 
   /** Gate open/edit behind password when set (test only — plain compare) */
+  const openViewNote = (note) => {
+    setViewNote(note);
+  };
+
   const requirePasswordThen = (note, action) => {
     if (note.password) {
       setPwdModal({ note, action });
@@ -546,6 +555,7 @@ const Notes = () => {
       return;
     }
     if (action === "open") enterFolder(note);
+    else if (action === "view") openViewNote(note);
     else openEditForm(note);
   };
 
@@ -564,17 +574,23 @@ const Notes = () => {
       enterFolder(note);
       return;
     }
+    if (action === "view") {
+      openViewNote(note);
+      return;
+    }
     if (action === "edit") {
       openEditForm(note);
       return;
     }
-    // Confirm current password, then remove lock
     if (action === "remove") {
       try {
         await updateNoteApi(note._id, { password: "" });
         if (editing && editing._id === note._id) {
           setForm((f) => ({ ...f, password: "" }));
           setEditing((e) => (e ? { ...e, password: "" } : e));
+        }
+        if (viewNote && viewNote._id === note._id) {
+          setViewNote({ ...note, password: "" });
         }
         toast.success("Password removed");
         fetchData({ silent: true });
@@ -625,9 +641,19 @@ const Notes = () => {
     setShowForm(true);
   };
 
-  const openEdit = (note) => {
+  /** Click note/file → notebook view (not edit modal) */
+  const openView = (note) => {
     if (note.type === "folder") {
       handleOpenFolder(note);
+      return;
+    }
+    requirePasswordThen(note, "view");
+  };
+
+  /** Explicit edit from menu / notebook actions */
+  const openEdit = (note) => {
+    if (note.type === "folder") {
+      requirePasswordThen(note, "edit");
       return;
     }
     requirePasswordThen(note, "edit");
@@ -1519,7 +1545,7 @@ const Notes = () => {
     );
   };
 
-  // ─── File / note card (image 4 style — compact) ───────────────────────────
+  // ─── File / note card — type-aware + image slider ─────────────────────────
   const FileNoteCard = ({ note }) => {
     const isSelected = selectedIds.has(note._id);
     const isBeingDragged =
@@ -1532,6 +1558,10 @@ const Notes = () => {
         : note.image
           ? [note.image]
           : [];
+    const slideIdx = cardSlide[note._id] || 0;
+    const safeIdx =
+      imagesList.length > 0 ? slideIdx % imagesList.length : 0;
+    const isFile = note.type === "file";
 
     return (
       <div
@@ -1541,62 +1571,126 @@ const Notes = () => {
         onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
         onDragEnd={handleDragEnd}
-        onClick={() => openEdit(note)}
+        onClick={() => openView(note)}
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setCtxMenu({ x: e.clientX, y: e.clientY, note });
         }}
-        className={`group relative rounded-xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/70 px-3 py-2.5 cursor-pointer hover:shadow-md hover:border-teal-400/40 transition-all duration-200 flex items-center gap-3 min-h-[56px] ${
+        className={`group relative rounded-2xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/70 overflow-hidden cursor-pointer hover:shadow-lg hover:border-teal-400/40 transition-all duration-200 flex flex-col ${
           isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""
         } ${isBeingDragged ? "opacity-30 border-dashed border-teal-500" : ""}`}
       >
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => toggleSelect(note._id, e)}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded text-teal-600 h-3.5 w-3.5 cursor-pointer shrink-0"
-        />
-
-        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center shrink-0 overflow-hidden">
-          {imagesList.length > 0 ? (
-            <img src={imagesList[0]} alt="" className="w-full h-full object-cover" />
-          ) : note.type === "file" ? (
-            <span
-              className={`text-[9px] font-black px-1 py-0.5 rounded ${badge.bg} ${badge.text}`}
-            >
-              {badge.label}
-            </span>
-          ) : (
-            <span className="text-base">{note.icon || "📝"}</span>
-          )}
+        <div className="absolute top-2.5 left-2.5 z-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => toggleSelect(note._id, e)}
+            onClick={(e) => e.stopPropagation()}
+            className="rounded text-teal-600 h-3.5 w-3.5 cursor-pointer"
+          />
+        </div>
+        <div className="absolute top-2 right-2 z-10">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCtxMenu({ x: e.clientX, y: e.clientY, note });
+            }}
+            className="p-1.5 rounded-lg bg-white/90 dark:bg-slate-800/90 text-slate-400 hover:text-slate-600 shadow-sm opacity-0 group-hover:opacity-100 transition"
+          >
+            <MoreHorizontal size={14} />
+          </button>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1">
+        {/* Image slider or type badge */}
+        {imagesList.length > 0 ? (
+          <div className="relative h-36 bg-slate-100 dark:bg-slate-900 overflow-hidden">
+            <img
+              src={imagesList[safeIdx]}
+              alt=""
+              className="w-full h-full object-cover"
+              onClick={(e) => openLightbox(imagesList, safeIdx, e)}
+            />
+            {imagesList.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCardSlide((prev) => ({
+                      ...prev,
+                      [note._id]:
+                        (safeIdx - 1 + imagesList.length) % imagesList.length,
+                    }));
+                  }}
+                  className="absolute left-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/40 text-white hover:bg-black/60"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCardSlide((prev) => ({
+                      ...prev,
+                      [note._id]: (safeIdx + 1) % imagesList.length,
+                    }));
+                  }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded-full bg-black/40 text-white hover:bg-black/60"
+                >
+                  <ChevronRight size={14} />
+                </button>
+                <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                  {imagesList.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        i === safeIdx ? "bg-white" : "bg-white/40"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="h-28 flex items-center justify-center bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/60">
+            {isFile ? (
+              <span
+                className={`text-xs font-black px-2.5 py-1.5 rounded-lg ${badge.bg} ${badge.text}`}
+              >
+                {badge.label}
+              </span>
+            ) : (
+              <span className="text-3xl">{note.icon || "📝"}</span>
+            )}
+          </div>
+        )}
+
+        <div className="p-3 flex-1 flex flex-col gap-1">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate flex items-center gap-1">
             {note.password ? (
               <Lock size={11} className="text-amber-500 shrink-0" />
             ) : null}
             {note.title}
           </p>
-          <p className="text-[11px] text-slate-400 truncate">
-            {note.type === "file"
-              ? formatSize(note.fileSize)
-              : note.categoryTag || "Note"}
-          </p>
+          {!isFile && note.body && (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2">
+              {note.body.replace(/[#*>`\[\]]/g, "").slice(0, 100)}
+            </p>
+          )}
+          <div className="mt-auto pt-1.5 flex items-center justify-between text-[10px] text-slate-400">
+            <span>
+              {isFile
+                ? formatSize(note.fileSize)
+                : note.categoryTag || "Note"}
+            </span>
+            {note.pinned && (
+              <Pin size={11} className="text-amber-500 fill-amber-500" />
+            )}
+          </div>
         </div>
-
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setCtxMenu({ x: e.clientX, y: e.clientY, note });
-          }}
-          className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition shrink-0"
-        >
-          <MoreHorizontal size={14} />
-        </button>
       </div>
     );
   };
@@ -1631,7 +1725,7 @@ const Notes = () => {
         onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
         onDragEnd={handleDragEnd}
-        onClick={() => (isFolder ? handleOpenFolder(note) : openEdit(note))}
+        onClick={() => (isFolder ? handleOpenFolder(note) : openView(note))}
         className={`group rounded-xl border px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/60 transition ${
           isSelected
             ? "bg-teal-50/50 dark:bg-teal-950/20 border-teal-300 dark:border-teal-700"
@@ -1774,7 +1868,7 @@ const Notes = () => {
               onDrop={(e) => handleDrop(e, note._id)}
               onDragEnd={handleDragEnd}
               onClick={() =>
-                isFolder ? handleOpenFolder(note) : openEdit(note)
+                isFolder ? handleOpenFolder(note) : openView(note)
               }
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -1926,7 +2020,7 @@ const Notes = () => {
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
               Files & Notes
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {otherItems.map((n) => (
                 <FileNoteCard key={n._id} note={n} />
               ))}
@@ -2031,92 +2125,93 @@ const Notes = () => {
         </div>
       </div>
 
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 mb-4 px-4 py-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-sm font-medium overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => handleNavigateBreadcrumb(null)}
-          onDragOver={(e) => handleDragOver(e, "root")}
-          onDragLeave={(e) => handleDragLeave(e, "root")}
-          onDrop={(e) => handleDrop(e, "root")}
-          className={`shrink-0 px-2 py-1 rounded-lg transition ${
-            !currentFolder
-              ? "text-teal-600 dark:text-teal-400 font-bold"
-              : "text-slate-500 hover:text-teal-600"
-          } ${
-            dragOverId === "root" && draggedId
-              ? "ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-950/30"
-              : ""
-          }`}
-        >
-          Root
-        </button>
-        {breadcrumbs.map((b, idx) => (
-          <Fragment key={b._id}>
-            <ChevronRight size={14} className="text-slate-400 shrink-0" />
-            <button
-              type="button"
-              onClick={() => handleNavigateBreadcrumb(b, idx)}
-              onDragOver={(e) => handleDragOver(e, b._id)}
-              onDragLeave={(e) => handleDragLeave(e, b._id)}
-              onDrop={(e) => handleDrop(e, b._id)}
-              className={`text-slate-500 hover:text-teal-600 transition truncate max-w-[140px] px-2 py-1 rounded-lg ${
-                dragOverId === b._id && draggedId
-                  ? "ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-950/30"
-                  : ""
-              }`}
-            >
-              {b.title}
-            </button>
-          </Fragment>
-        ))}
-        {currentFolder && (
-          <>
-            <ChevronRight size={14} className="text-slate-400 shrink-0" />
-            <span className="text-teal-600 dark:text-teal-400 font-bold truncate max-w-[160px] px-2 py-1">
-              {currentFolder.title}
-            </span>
-          </>
-        )}
-      </nav>
-
-      {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("search") || "Search..."}
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500/40 text-sm transition"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowFilters((v) => !v)}
-          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-semibold transition shrink-0 ${
-            showFilters || activeFilterCount > 0
-              ? "bg-teal-500/15 border-teal-500/40 text-teal-700 dark:text-teal-300"
-              : "bg-slate-100/80 dark:bg-slate-800/80 border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300"
-          }`}
-        >
-          <Filter size={14} />
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-1 w-5 h-5 rounded-full bg-teal-600 text-white text-[10px] flex items-center justify-center">
-              {activeFilterCount}
-            </span>
+      {/* Path + search row */}
+      <div className="mb-4 space-y-3">
+        <nav className="flex items-center gap-1 px-1 text-sm overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => handleNavigateBreadcrumb(null)}
+            onDragOver={(e) => handleDragOver(e, "root")}
+            onDragLeave={(e) => handleDragLeave(e, "root")}
+            onDrop={(e) => handleDrop(e, "root")}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition border ${
+              !currentFolder
+                ? "bg-teal-600 text-white border-teal-600"
+                : "bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-teal-400"
+            } ${
+              dragOverId === "root" && draggedId
+                ? "ring-2 ring-teal-500"
+                : ""
+            }`}
+          >
+            Root
+          </button>
+          {breadcrumbs.map((b, idx) => (
+            <Fragment key={b._id}>
+              <ChevronRight size={14} className="text-slate-300 shrink-0" />
+              <button
+                type="button"
+                onClick={() => handleNavigateBreadcrumb(b, idx)}
+                onDragOver={(e) => handleDragOver(e, b._id)}
+                onDragLeave={(e) => handleDragLeave(e, b._id)}
+                onDrop={(e) => handleDrop(e, b._id)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition border truncate max-w-[140px] bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-teal-400 ${
+                  dragOverId === b._id && draggedId
+                    ? "ring-2 ring-teal-500"
+                    : ""
+                }`}
+              >
+                {b.title}
+              </button>
+            </Fragment>
+          ))}
+          {currentFolder && (
+            <>
+              <ChevronRight size={14} className="text-slate-300 shrink-0" />
+              <span className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/30 truncate max-w-[160px]">
+                {currentFolder.title}
+              </span>
+            </>
           )}
-        </button>
+        </nav>
+
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("search") || "Search notes, folders, files..."}
+              className="w-full pl-10 pr-4 py-2.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-teal-500/25 focus:border-teal-500 text-sm transition shadow-sm"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-xs font-semibold transition shrink-0 ${
+              showFilters || activeFilterCount > 0
+                ? "bg-teal-600 text-white border-teal-600 shadow-md shadow-teal-600/20"
+                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-400"
+            }`}
+          >
+            <Filter size={14} />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-0.5 w-5 h-5 rounded-full bg-white/20 text-[10px] flex items-center justify-center font-bold">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {showFilters && (
-        <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-700/80 space-y-4">
+        <div className="mb-6 p-5 rounded-3xl bg-white dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
               Filters
             </span>
             {(catFilter || pinFilter || typeFilter || search.trim()) && (
@@ -2884,6 +2979,261 @@ const Notes = () => {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notebook view — read note like a page (not edit modal) */}
+      {viewNote && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-sm"
+          onClick={() => setViewNote(null)}
+        >
+          <div
+            className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80">
+              <span className="text-xl shrink-0">
+                {viewNote.icon || (viewNote.type === "file" ? "📄" : "📝")}
+              </span>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                  {viewNote.title}
+                </h2>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {viewNote.categoryTag || viewNote.type || "Note"}
+                  {viewNote.updatedAt
+                    ? ` · ${formatDate(viewNote.updatedAt)}`
+                    : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTogglePin(viewNote._id, e);
+                  setViewNote((v) =>
+                    v ? { ...v, pinned: !v.pinned } : v,
+                  );
+                }}
+                className={`p-2 rounded-lg ${
+                  viewNote.pinned
+                    ? "text-amber-500"
+                    : "text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700"
+                }`}
+                title="Pin"
+              >
+                <Pin
+                  size={16}
+                  className={viewNote.pinned ? "fill-amber-500" : ""}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const n = viewNote;
+                  setViewNote(null);
+                  openEdit(n);
+                }}
+                className="p-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-500/10"
+                title="Edit"
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDel(viewNote._id);
+                }}
+                className="p-2 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewNote(null)}
+                className="p-2 rounded-lg text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 sm:px-8 py-5 space-y-5">
+              {/* Image slider */}
+              {(() => {
+                const imgs =
+                  Array.isArray(viewNote.images) && viewNote.images.length
+                    ? viewNote.images
+                    : viewNote.image
+                      ? [viewNote.image]
+                      : [];
+                if (!imgs.length) return null;
+                const idx = cardSlide[`view-${viewNote._id}`] || 0;
+                const safe = idx % imgs.length;
+                return (
+                  <div className="relative rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                    <img
+                      src={imgs[safe]}
+                      alt=""
+                      className="w-full max-h-64 object-contain cursor-zoom-in"
+                      onClick={(e) => openLightbox(imgs, safe, e)}
+                    />
+                    {imgs.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCardSlide((p) => ({
+                              ...p,
+                              [`view-${viewNote._id}`]:
+                                (safe - 1 + imgs.length) % imgs.length,
+                            }))
+                          }
+                          className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCardSlide((p) => ({
+                              ...p,
+                              [`view-${viewNote._id}`]:
+                                (safe + 1) % imgs.length,
+                            }))
+                          }
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 text-white"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                          {imgs.map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                setCardSlide((p) => ({
+                                  ...p,
+                                  [`view-${viewNote._id}`]: i,
+                                }))
+                              }
+                              className={`w-2 h-2 rounded-full ${
+                                i === safe ? "bg-teal-500" : "bg-white/50"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {viewNote.type === "file" && (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
+                  <File size={20} className="text-slate-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {viewNote.title}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {viewNote.fileType || "File"} ·{" "}
+                      {formatSize(viewNote.fileSize)}
+                    </p>
+                  </div>
+                  {viewNote.fileUrl && (
+                    <a
+                      href={viewNote.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold"
+                    >
+                      Open
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {viewNote.body && (
+                <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-slate-700 dark:text-slate-200 leading-relaxed">
+                  {viewNote.body}
+                </div>
+              )}
+
+              {Array.isArray(viewNote.items) && viewNote.items.length > 0 && (
+                <ul className="space-y-2">
+                  {viewNote.items.map((it, i) => (
+                    <li
+                      key={it._id || i}
+                      className="flex items-start gap-2 text-sm"
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) =>
+                          handleToggleCheck(viewNote._id, it._id, e)
+                        }
+                        className="mt-0.5 shrink-0"
+                      >
+                        {it.checked ? (
+                          <CheckCircle2
+                            size={16}
+                            className="text-teal-600"
+                          />
+                        ) : (
+                          <Circle size={16} className="text-slate-400" />
+                        )}
+                      </button>
+                      <span
+                        className={
+                          it.checked
+                            ? "line-through text-slate-400"
+                            : "text-slate-700 dark:text-slate-200"
+                        }
+                      >
+                        {it.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {Array.isArray(viewNote.links) && viewNote.links.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  {viewNote.links.map((link, idx) => (
+                    <a
+                      key={link._id || idx}
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-100 dark:bg-slate-700/50 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition"
+                    >
+                      <LinkIcon size={14} className="text-slate-400 shrink-0" />
+                      <span className="truncate flex-1">
+                        {link.label || link.url}
+                      </span>
+                      {link.tag && (
+                        <span className="text-[10px] font-bold uppercase text-teal-600">
+                          {link.tag}
+                        </span>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {!viewNote.body &&
+                !(viewNote.items || []).length &&
+                !(viewNote.links || []).length &&
+                !(viewNote.images || []).length &&
+                !viewNote.image &&
+                viewNote.type !== "file" && (
+                  <p className="text-sm text-slate-400 italic text-center py-8">
+                    Empty note
+                  </p>
+                )}
             </div>
           </div>
         </div>
