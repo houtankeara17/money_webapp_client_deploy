@@ -245,75 +245,106 @@ const Notes = () => {
   // Context menu
   const [ctxMenu, setCtxMenu] = useState(null); // { x, y, note } | null
 
-  /** Insert markdown-style formatting into note body (real notes toolbar) */
+  /** Insert markdown into note body. onMouseDown preventDefault keeps selection. */
   const insertFormat = (kind) => {
     const el = bodyRef.current;
-    const body = form.body || "";
-    let start = el ? el.selectionStart : body.length;
-    let end = el ? el.selectionEnd : body.length;
-    const selected = body.slice(start, end);
-    let insert = "";
-    let cursorOffset = 0;
+    setForm((prev) => {
+      const body = prev.body || "";
+      const start = el != null ? el.selectionStart : body.length;
+      const end = el != null ? el.selectionEnd : body.length;
+      const selected = body.slice(start, end);
+      let insert = "";
+      let selStart = start;
+      let selEnd = start;
 
-    switch (kind) {
-      case "h1":
-        insert = selected ? `# ${selected}` : "# Big title\n";
-        cursorOffset = selected ? insert.length : 2;
-        break;
-      case "h2":
-        insert = selected ? `## ${selected}` : "## Small title\n";
-        cursorOffset = selected ? insert.length : 3;
-        break;
-      case "bold":
-        insert = selected ? `**${selected}**` : "**bold**";
-        cursorOffset = selected ? insert.length : 2;
-        break;
-      case "italic":
-        insert = selected ? `*${selected}*` : "*italic*";
-        cursorOffset = selected ? insert.length : 1;
-        break;
-      case "ul":
-        insert = selected
-          ? selected
-              .split("\n")
-              .map((l) => (l.trim() ? `- ${l}` : l))
-              .join("\n")
-          : "- List item\n";
-        cursorOffset = insert.length;
-        break;
-      case "ol":
-        insert = selected
-          ? selected
-              .split("\n")
-              .map((l, i) => (l.trim() ? `${i + 1}. ${l}` : l))
-              .join("\n")
-          : "1. Numbered item\n";
-        cursorOffset = insert.length;
-        break;
-      case "link": {
-        const url = window.prompt("Link URL", "https://");
-        if (!url) return;
-        const label = selected || "link text";
-        insert = `[${label}](${url})`;
-        cursorOffset = insert.length;
-        break;
+      switch (kind) {
+        case "h1":
+          insert = selected ? `# ${selected}` : "# Big title";
+          if (!selected) {
+            selStart = start + 2;
+            selEnd = start + insert.length;
+          } else {
+            selStart = start;
+            selEnd = start + insert.length;
+          }
+          break;
+        case "h2":
+          insert = selected ? `## ${selected}` : "## Small title";
+          if (!selected) {
+            selStart = start + 3;
+            selEnd = start + insert.length;
+          } else {
+            selStart = start;
+            selEnd = start + insert.length;
+          }
+          break;
+        case "bold":
+          insert = selected ? `**${selected}**` : "**bold**";
+          if (!selected) {
+            selStart = start + 2;
+            selEnd = start + 6;
+          } else {
+            selStart = start;
+            selEnd = start + insert.length;
+          }
+          break;
+        case "italic":
+          insert = selected ? `*${selected}*` : "*italic*";
+          if (!selected) {
+            selStart = start + 1;
+            selEnd = start + 7;
+          } else {
+            selStart = start;
+            selEnd = start + insert.length;
+          }
+          break;
+        case "ul":
+          insert = selected
+            ? selected
+                .split("\n")
+                .map((l) => (l.trim() ? `- ${l}` : l))
+                .join("\n")
+            : "- List item";
+          selStart = start;
+          selEnd = start + insert.length;
+          break;
+        case "ol":
+          insert = selected
+            ? selected
+                .split("\n")
+                .map((l, i) => (l.trim() ? `${i + 1}. ${l}` : l))
+                .join("\n")
+            : "1. Numbered item";
+          selStart = start;
+          selEnd = start + insert.length;
+          break;
+        case "link": {
+          const url = window.prompt("Link URL", "https://");
+          if (!url) return prev;
+          const label = selected || "link text";
+          insert = `[${label}](${url})`;
+          selStart = start;
+          selEnd = start + insert.length;
+          break;
+        }
+        case "quote":
+          insert = selected ? `> ${selected}` : "> Quote";
+          selStart = start;
+          selEnd = start + insert.length;
+          break;
+        default:
+          return prev;
       }
-      case "quote":
-        insert = selected ? `> ${selected}` : "> Quote\n";
-        cursorOffset = insert.length;
-        break;
-      default:
-        return;
-    }
 
-    const next = body.slice(0, start) + insert + body.slice(end);
-    setForm({ ...form, body: next });
-    setTimeout(() => {
-      if (!el) return;
-      el.focus();
-      const pos = start + (selected ? insert.length : cursorOffset);
-      el.setSelectionRange(pos, pos);
-    }, 0);
+      const next = body.slice(0, start) + insert + body.slice(end);
+      setTimeout(() => {
+        const ta = bodyRef.current;
+        if (!ta) return;
+        ta.focus();
+        ta.setSelectionRange(selStart, selEnd);
+      }, 0);
+      return { ...prev, body: next };
+    });
   };
 
   useEffect(() => {
@@ -1367,16 +1398,134 @@ const Notes = () => {
 
 
   // ─── Compact file-manager card (screenshot style) ─────────────────────────
-  const CompactFileCard = ({ note }) => {
-    const isFolder = note.type === "folder";
+
+  // ─── Folder card (image 3 style) ──────────────────────────────────────────
+  const FolderCard = ({ note }) => {
     const isSelected = selectedIds.has(note._id);
     const isBeingDragged =
       draggedId === note._id ||
       (draggedId && selectedIds.has(note._id) && selectedIds.has(draggedId));
     const isDropTarget =
       dragOverId === note._id && draggedId && draggedId !== note._id;
-    const badge = getTypeBadge(note);
     const stats = folderStats[note._id];
+    const sizeLabel = stats
+      ? stats.size
+        ? formatSize(stats.size)
+        : stats.total === 0
+          ? "Empty"
+          : `${stats.total} items`
+      : "…";
+
+    return (
+      <div
+        draggable
+        onDragStart={(e) => handleDragStart(e, note._id)}
+        onDragOver={(e) => handleDragOver(e, note._id)}
+        onDragLeave={(e) => handleDragLeave(e, note._id)}
+        onDrop={(e) => handleDrop(e, note._id)}
+        onDragEnd={handleDragEnd}
+        onClick={() => handleOpenFolder(note)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setCtxMenu({ x: e.clientX, y: e.clientY, note });
+        }}
+        className={`group relative rounded-2xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/70 p-4 cursor-pointer hover:shadow-lg hover:border-teal-400/40 transition-all duration-200 flex flex-col min-h-[180px] ${
+          isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""
+        } ${isBeingDragged ? "opacity-30 scale-95 border-dashed border-teal-500" : ""} ${
+          isDropTarget
+            ? "ring-2 ring-amber-500 border-amber-500 scale-[1.02]"
+            : ""
+        }`}
+      >
+        <div className="absolute top-3 left-3 z-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => toggleSelect(note._id, e)}
+            onClick={(e) => e.stopPropagation()}
+            className="rounded text-teal-600 h-4 w-4 cursor-pointer"
+          />
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center pt-2">
+          <div className="w-16 h-14 mb-3 flex items-center justify-center">
+            {note.icon && note.icon !== "📁" ? (
+              <span className="text-4xl drop-shadow-sm">{note.icon}</span>
+            ) : (
+              <Folder
+                size={48}
+                className="text-slate-700 dark:text-slate-300"
+                fill="currentColor"
+                strokeWidth={1}
+              />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={(e) => openRename(note, e)}
+            className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate w-full text-center hover:text-teal-600 transition"
+            title="Click to rename"
+          >
+            {note.title}
+          </button>
+          <div className="mt-1.5 flex items-center gap-2 flex-wrap justify-center">
+            <span className="text-xs text-slate-500">{sizeLabel}</span>
+            {note.password ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-600 text-[10px] font-medium text-slate-500">
+                <Lock size={10} /> Only you
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExport();
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+              title="Export"
+            >
+              <Download size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                openDuplicateModal(note._id);
+              }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700"
+              title="Duplicate"
+            >
+              <Copy size={14} />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCtxMenu({ x: e.clientX, y: e.clientY, note });
+            }}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── File / note card (image 4 style — compact) ───────────────────────────
+  const FileNoteCard = ({ note }) => {
+    const isSelected = selectedIds.has(note._id);
+    const isBeingDragged =
+      draggedId === note._id ||
+      (draggedId && selectedIds.has(note._id) && selectedIds.has(draggedId));
+    const badge = getTypeBadge(note);
     const imagesList =
       Array.isArray(note.images) && note.images.length > 0
         ? note.images
@@ -1392,106 +1541,62 @@ const Notes = () => {
         onDragLeave={(e) => handleDragLeave(e, note._id)}
         onDrop={(e) => handleDrop(e, note._id)}
         onDragEnd={handleDragEnd}
-        onClick={() => (isFolder ? handleOpenFolder(note) : openEdit(note))}
+        onClick={() => openEdit(note)}
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setCtxMenu({ x: e.clientX, y: e.clientY, note });
         }}
-        className={`group relative rounded-xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/80 p-3.5 cursor-pointer hover:border-teal-400/50 dark:hover:border-teal-500/40 hover:shadow-md transition-all duration-200 flex flex-col items-center text-center min-h-[128px] ${
-          isSelected
-            ? "ring-2 ring-teal-500 border-teal-500 bg-teal-50/40 dark:bg-teal-950/20"
-            : ""
-        } ${
-          isBeingDragged
-            ? "opacity-30 scale-95 border-dashed border-teal-500"
-            : ""
-        } ${
-          isDropTarget
-            ? "ring-2 ring-amber-500 border-amber-500 scale-[1.03]"
-            : ""
-        }`}
+        className={`group relative rounded-xl border bg-white dark:bg-slate-800/90 border-slate-200/80 dark:border-slate-700/70 px-3 py-2.5 cursor-pointer hover:shadow-md hover:border-teal-400/40 transition-all duration-200 flex items-center gap-3 min-h-[56px] ${
+          isSelected ? "ring-2 ring-teal-500 border-teal-500" : ""
+        } ${isBeingDragged ? "opacity-30 border-dashed border-teal-500" : ""}`}
       >
-        <div className="absolute top-2 left-2 z-10">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => toggleSelect(note._id, e)}
-            onClick={(e) => e.stopPropagation()}
-            className="rounded text-violet-600 h-3.5 w-3.5 cursor-pointer"
-          />
-        </div>
-        <div className="absolute top-1.5 right-1.5 z-10 opacity-0 group-hover:opacity-100 transition">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setCtxMenu({ x: e.clientX, y: e.clientY, note });
-            }}
-            className="p-1 rounded-lg text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-700"
-          >
-            <MoreHorizontal size={14} />
-          </button>
-        </div>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => toggleSelect(note._id, e)}
+          onClick={(e) => e.stopPropagation()}
+          className="rounded text-teal-600 h-3.5 w-3.5 cursor-pointer shrink-0"
+        />
 
-        <div className="flex-1 flex flex-col items-center justify-center pt-4 pb-1 w-full">
-          {imagesList.length > 0 && !isFolder ? (
-            <div className="w-12 h-12 rounded-xl overflow-hidden mb-2 border border-slate-200 dark:border-slate-600">
-              <img
-                src={imagesList[0]}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-11 h-11 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 flex items-center justify-center mb-2">
-              {isFolder ? (
-                note.icon && note.icon !== "📁" ? (
-                  <span className="text-2xl">{note.icon}</span>
-                ) : (
-                  badge.cardIcon
-                )
-              ) : (
-                <div
-                  className={`px-1.5 py-1 rounded-md text-[10px] font-black tracking-wide ${badge.bg} ${badge.text}`}
-                >
-                  {badge.label}
-                </div>
-              )}
-            </div>
-          )}
-
-          {isFolder ? (
-            <button
-              type="button"
-              onClick={(e) => openRename(note, e)}
-              className="font-medium text-xs text-slate-800 dark:text-slate-100 truncate w-full px-1 hover:text-violet-600 transition flex items-center justify-center gap-0.5"
-              title="Click to rename"
+        <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center shrink-0 overflow-hidden">
+          {imagesList.length > 0 ? (
+            <img src={imagesList[0]} alt="" className="w-full h-full object-cover" />
+          ) : note.type === "file" ? (
+            <span
+              className={`text-[9px] font-black px-1 py-0.5 rounded ${badge.bg} ${badge.text}`}
             >
-              {note.password ? (
-                <Lock size={10} className="text-amber-500 shrink-0" />
-              ) : null}
-              <span className="truncate">{note.title}</span>
-            </button>
+              {badge.label}
+            </span>
           ) : (
-            <h3 className="font-medium text-xs text-slate-800 dark:text-slate-100 truncate w-full px-1 flex items-center justify-center gap-0.5">
-              {note.password ? (
-                <Lock size={10} className="text-amber-500 shrink-0" />
-              ) : null}
-              <span className="truncate">{note.title}</span>
-            </h3>
+            <span className="text-base">{note.icon || "📝"}</span>
           )}
+        </div>
 
-          <p className="text-[10px] text-slate-400 mt-0.5 truncate w-full px-1">
-            {isFolder
-              ? stats
-                ? stats.total === 0
-                  ? "Empty"
-                  : `${stats.total} items${stats.size ? ` · ${formatSize(stats.size)}` : ""}`
-                : "…"
-              : formatSize(note.fileSize)}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-1">
+            {note.password ? (
+              <Lock size={11} className="text-amber-500 shrink-0" />
+            ) : null}
+            {note.title}
+          </p>
+          <p className="text-[11px] text-slate-400 truncate">
+            {note.type === "file"
+              ? formatSize(note.fileSize)
+              : note.categoryTag || "Note"}
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setCtxMenu({ x: e.clientX, y: e.clientY, note });
+          }}
+          className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 opacity-0 group-hover:opacity-100 transition shrink-0"
+        >
+          <MoreHorizontal size={14} />
+        </button>
       </div>
     );
   };
@@ -1500,18 +1605,14 @@ const Notes = () => {
     <button
       type="button"
       onClick={() => openCreate("folder")}
-      className="group relative rounded-xl border-2 border-dashed border-slate-200 dark:border-white/15 bg-transparent p-3.5 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 transition-all duration-200 flex flex-col items-center justify-center min-h-[128px] text-slate-400 hover:text-teal-600"
+      className="group relative rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-transparent p-4 cursor-pointer hover:border-teal-400 hover:bg-teal-50/30 dark:hover:bg-teal-950/20 transition-all duration-200 flex flex-col items-center justify-center min-h-[180px] text-slate-400 hover:text-teal-600"
     >
-      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mb-2 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/40 transition">
-        <Plus size={18} />
+      <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mb-2 group-hover:bg-teal-100 dark:group-hover:bg-teal-900/40 transition">
+        <Plus size={20} />
       </div>
       <span className="text-xs font-semibold">New folder</span>
     </button>
   );
-
-  // Legacy aliases so any remaining references keep working
-  const FolderCard = CompactFileCard;
-  const NoteCard = CompactFileCard;
 
   // ─── List / Table row ─────────────────────────────────────────────────────
   const ListRow = ({ note }) => {
@@ -1813,7 +1914,7 @@ const Notes = () => {
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {folderItems.map((n) => (
-                <CompactFileCard key={n._id} note={n} />
+                <FolderCard key={n._id} note={n} />
               ))}
               <CreateFolderCard />
             </div>
@@ -1825,9 +1926,9 @@ const Notes = () => {
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">
               Files & Notes
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
               {otherItems.map((n) => (
-                <CompactFileCard key={n._id} note={n} />
+                <FileNoteCard key={n._id} note={n} />
               ))}
             </div>
           </div>
@@ -1852,25 +1953,28 @@ const Notes = () => {
 
   return (
     <div className="w-full min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-[1700px] mx-auto ">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 bg-teal-500/10 dark:bg-teal-400/10 rounded-2xl border border-teal-500/20">
-              <Sparkles className="w-6 h-6 text-teal-600 dark:text-amber-400" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+      {/* Header — gradient teal banner */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-6 rounded-3xl bg-gradient-to-br from-teal-900 via-slate-900 to-slate-900 text-white shadow-xl relative overflow-hidden mb-6">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               {currentFolder ? currentFolder.title : t("notes") || "Notes"}
             </h1>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-500/20 border border-teal-400/30 text-teal-200 text-xs font-semibold">
+              <Sparkles size={12} />
+              {items.length} {t("entries") || "entries"}
+            </span>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1.5 font-medium pl-1">
-            {items.length} {t("entries") || "entries"}
-            {folders.length > 0 && ` · ${folders.length} folders`}
-            {pinned.length > 0 && ` · ${pinned.length} ${t("pinned") || "pinned"}`}
+          <p className="text-slate-300 text-xs sm:text-sm mt-1.5 font-medium">
+            {folders.length > 0 && `${folders.length} folders · `}
+            {pinned.length > 0
+              ? `${pinned.length} ${t("pinned") || "pinned"}`
+              : t("manageNotes") || "Organize folders, notes & files"}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="relative z-10 flex flex-wrap items-center gap-2">
           <ViewToggle
             view={view}
             onChange={setViewMode}
@@ -1888,7 +1992,7 @@ const Notes = () => {
           <button
             type="button"
             onClick={() => importRef.current?.click()}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold transition"
           >
             <Upload size={14} /> {t("import") || "Import"}
           </button>
@@ -1896,53 +2000,52 @@ const Notes = () => {
           <button
             type="button"
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-semibold transition"
             title="Export selected rows, or all if none selected"
           >
-            <Download size={14} /> {selectedIds.size > 0 ? `Export (${selectedIds.size})` : (t("export") || "Export")}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openCreate("folder")}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold border border-amber-500/20 hover:bg-amber-500/20 transition"
-          >
-            <FolderPlus size={15} /> {t("newFolder") || "New Folder"}
+            <Download size={14} />{" "}
+            {selectedIds.size > 0
+              ? `Export (${selectedIds.size})`
+              : t("export") || "Export"}
           </button>
 
           <button
             type="button"
             onClick={handleDeleteAll}
             disabled={items.length === 0}
-            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/30 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-200 text-xs font-semibold transition disabled:opacity-40"
           >
-            <Trash2 size={15} />
-            <span className="hidden sm:inline">{t("deleteAll") || "Delete All"}</span>
+            <Trash2 size={14} />
+            <span className="hidden sm:inline">
+              {t("deleteAll") || "Delete All"}
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => openCreate("note")}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-lg shadow-teal-600/25 active:scale-95 transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-white text-xs font-bold shadow-lg shadow-teal-500/30 transition"
           >
             <Plus size={16} /> {t("addNote") || "Add Note"}
           </button>
         </div>
       </div>
 
-      {/* Breadcrumb — droppable to move items up */}
-      <nav className="flex items-center gap-1.5 mb-5 px-3.5 py-2.5 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-sm font-semibold overflow-x-auto">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 mb-4 px-4 py-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-sm font-medium overflow-x-auto">
         <button
           type="button"
           onClick={() => handleNavigateBreadcrumb(null)}
           onDragOver={(e) => handleDragOver(e, "root")}
           onDragLeave={(e) => handleDragLeave(e, "root")}
           onDrop={(e) => handleDrop(e, "root")}
-          className={`hover:text-teal-600 transition shrink-0 px-2 py-1 rounded-lg ${
-            !currentFolder ? "text-teal-600 font-bold" : "text-slate-500"
+          className={`shrink-0 px-2 py-1 rounded-lg transition ${
+            !currentFolder
+              ? "text-teal-600 dark:text-teal-400 font-bold"
+              : "text-slate-500 hover:text-teal-600"
           } ${
             dragOverId === "root" && draggedId
-              ? "ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700"
+              ? "ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-950/30"
               : ""
           }`}
         >
@@ -1957,9 +2060,9 @@ const Notes = () => {
               onDragOver={(e) => handleDragOver(e, b._id)}
               onDragLeave={(e) => handleDragLeave(e, b._id)}
               onDrop={(e) => handleDrop(e, b._id)}
-              className={`text-slate-500 hover:text-teal-600 transition truncate max-w-[120px] px-2 py-1 rounded-lg ${
+              className={`text-slate-500 hover:text-teal-600 transition truncate max-w-[140px] px-2 py-1 rounded-lg ${
                 dragOverId === b._id && draggedId
-                  ? "ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700"
+                  ? "ring-2 ring-teal-500 bg-teal-50 dark:bg-teal-950/30"
                   : ""
               }`}
             >
@@ -1970,7 +2073,7 @@ const Notes = () => {
         {currentFolder && (
           <>
             <ChevronRight size={14} className="text-slate-400 shrink-0" />
-            <span className="text-teal-600 font-bold truncate max-w-[160px] px-2 py-1">
+            <span className="text-teal-600 dark:text-teal-400 font-bold truncate max-w-[160px] px-2 py-1">
               {currentFolder.title}
             </span>
           </>
@@ -1978,7 +2081,7 @@ const Notes = () => {
       </nav>
 
       {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search
             size={16}
@@ -1988,16 +2091,16 @@ const Notes = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("search") || "Search..."}
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 outline-none focus:ring-2 focus:ring-teal-500/30 text-sm shadow-2xs transition"
+            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500/40 text-sm transition"
           />
         </div>
         <button
           type="button"
           onClick={() => setShowFilters((v) => !v)}
-          className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl border text-xs font-semibold transition ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-semibold transition shrink-0 ${
             showFilters || activeFilterCount > 0
-              ? "bg-teal-50 dark:bg-teal-950/30 border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300"
-              : "bg-white/80 dark:bg-slate-800/80 border-slate-200/80 dark:border-slate-700/80 text-slate-600 dark:text-slate-300"
+              ? "bg-teal-500/15 border-teal-500/40 text-teal-700 dark:text-teal-300"
+              : "bg-slate-100/80 dark:bg-slate-800/80 border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300"
           }`}
         >
           <Filter size={14} />
@@ -2301,6 +2404,7 @@ const Notes = () => {
                     key={kind}
                     type="button"
                     title={title}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => insertFormat(kind)}
                     className="p-2 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-500/10 dark:hover:bg-teal-500/15 transition"
                   >
