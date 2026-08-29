@@ -822,6 +822,11 @@ const Savings = () => {
                       "{item.noted}"
                     </p>
                   )}
+                  {item.planId && (
+                    <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      📈 {t("fromPlan") || "From investment plan"}
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/40 flex items-center justify-end gap-2">
