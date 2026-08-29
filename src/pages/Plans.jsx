@@ -126,6 +126,7 @@ const Plans = () => {
     kind: "profit",
     noted: "",
     markCompleted: false,
+    createExpense: false,
   });
 
   // Filters state
@@ -332,6 +333,7 @@ const Plans = () => {
       kind: "profit",
       noted: "",
       markCompleted: false,
+      createExpense: false,
     });
     setShowReturn(true);
   };
@@ -406,6 +408,7 @@ const Plans = () => {
         kind: returnForm.kind,
         noted: returnForm.noted,
         markCompleted: returnForm.markCompleted,
+        createExpense: returnForm.createExpense,
       });
       toast.success(data.message || t("success"));
       setShowReturn(false);
@@ -1011,6 +1014,45 @@ const Plans = () => {
                             {t("entries") || "entries"})
                           </span>
                         </div>
+                        {Number(item.totalBorrowedFromGainUSD) > 0 && (
+                          <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">
+                            {t("borrowedFromGain") || "Borrowed from gain"}:{" "}
+                            {formatMoney(
+                              item.totalBorrowedFromGainUSD,
+                              displayCurrency,
+                              rates,
+                            )}
+                          </div>
+                        )}
+                        {(item.investmentReturns || []).length > 0 && (
+                          <ul className="space-y-1 max-h-28 overflow-y-auto mt-1">
+                            {[...(item.investmentReturns || [])]
+                              .slice(-5)
+                              .reverse()
+                              .map((r) => (
+                                <li
+                                  key={r._id}
+                                  className="text-[11px] text-slate-500 flex justify-between gap-2"
+                                >
+                                  <span>
+                                    {r.date
+                                      ? new Date(r.date).toLocaleDateString()
+                                      : "—"}{" "}
+                                    · {r.kind}
+                                  </span>
+                                  <span
+                                    className={
+                                      Number(r.amountUSD) >= 0
+                                        ? "text-emerald-600"
+                                        : "text-rose-500"
+                                    }
+                                  >
+                                    {formatOriginal(r.amount, r.currency)}
+                                  </span>
+                                </li>
+                              ))}
+                          </ul>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1392,13 +1434,29 @@ const Plans = () => {
                 }
                 className={inputCls}
               >
-                <option value="profit">{t("profit")}</option>
-                <option value="dividend">{t("dividend")}</option>
-                <option value="sale">{t("sale")}</option>
-                <option value="deposit">{t("deposit")}</option>
-                <option value="other">{t("other")}</option>
+                <option value="profit">Profit → Saving + Budget</option>
+                <option value="dividend">Dividend → Saving + Budget</option>
+                <option value="deposit">Deposit → Saving + funding</option>
+                <option value="sale">Sale → Saving + Budget</option>
+                <option value="borrow">Borrow from saving (info)</option>
+                <option value="other">Other → Saving</option>
               </select>
             </div>
+            {returnForm.kind === "borrow" && (
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={returnForm.createExpense}
+                  onChange={(e) =>
+                    setReturnForm({
+                      ...returnForm,
+                      createExpense: e.target.checked,
+                    })
+                  }
+                />
+                {t("createExpense") || "Also create Expense (everyday spend)"}
+              </label>
+            )}
             <div>
               <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
                 {t("note")}
