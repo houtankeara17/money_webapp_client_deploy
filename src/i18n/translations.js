@@ -421,6 +421,24 @@ export const translations = {
     clickToUploadReceipt: "Click to upload receipt",
     replaceImage: "Replace image",
     imageFormatLimit: "JPG, PNG, WebP or PDF · max 8MB",
+
+    // --- Savings Page Strings ---
+    saveSaving: "Save",
+    confirmDeleteSaving: "Are you sure you want to delete this saving entry?",
+    confirmDeleteAllSavings: "Are you sure you want to delete all savings entries?",
+    deleteSaving: "Delete Saving",
+
+borrowedFromGain: "Borrowed from gain",
+createExpense: "Also create Expense (everyday spend)",
+addReturn: "Add Return",
+totalGain: "Total Gain",
+gain: "Gain",
+kind: "Kind",
+profit: "Profit",
+dividend: "Dividend",
+sale: "Sale",
+deposit: "Deposit",
+markCompleted: "Mark completed",
   },
 
   km: {
@@ -846,6 +864,24 @@ export const translations = {
     clickToUploadReceipt: "ចុចដើម្បីផ្ទុកឡើងបង្កាន់ដៃ",
     replaceImage: "ផ្លាស់ប្តូររូបភាព",
     imageFormatLimit: "JPG, PNG, WebP ឬ PDF · អតិបរមា 8MB",
+
+    // --- Savings Page Strings ---
+    saveSaving: "រក្សាទុក",
+    confirmDeleteSaving: "តើអ្នកពិតជាចង់លុបការសន្សំមួយនេះមែនទេ?",
+    confirmDeleteAllSavings: "តើអ្នកពិតជាចង់លុបការសន្សំទាំងអស់មែនទេ?",
+    deleteSaving: "លុបការសន្សំ",
+
+borrowedFromGain: "បានខ្ចីពីប្រាក់ចំណេញ",
+createExpense: "បង្កើតការចំណាយបន្ថែម (ចំណាយប្រចាំថ្ងៃ)",
+addReturn: "បន្ថែមត្រឡប់",
+totalGain: "ផលចំណេញសរុប",
+gain: "ចំណេញ",
+kind: "ប្រភេទ",
+profit: "ប្រាក់ចំណេញ",
+dividend: "ភាគលាភ",
+sale: "លក់",
+deposit: "ប្រាក់បញ្ញើ",
+markCompleted: "បានបញ្ចប់",
   },
 };
 
