@@ -999,62 +999,63 @@ const Plans = () => {
                       </span>
                     </div>
 
-                    {item.goalType === "Investment" && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60">
-                        <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mb-1">
-                          {t("totalGain") || "Total gained"}:{" "}
-                          {formatMoney(
-                            item.totalGainUSD || 0,
-                            displayCurrency,
-                            rates,
-                          )}
-                          <span className="text-slate-400 font-normal">
-                            {" "}
-                            ({(item.investmentReturns || []).length}{" "}
-                            {t("entries") || "entries"})
-                          </span>
-                        </div>
-                        {Number(item.totalBorrowedFromGainUSD) > 0 && (
-                          <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">
-                            {t("borrowedFromGain") || "Borrowed from gain"}:{" "}
-                            {formatMoney(
-                              item.totalBorrowedFromGainUSD,
-                              displayCurrency,
-                              rates,
-                            )}
-                          </div>
-                        )}
-                        {(item.investmentReturns || []).length > 0 && (
-                          <ul className="space-y-1 max-h-28 overflow-y-auto mt-1">
-                            {[...(item.investmentReturns || [])]
-                              .slice(-5)
-                              .reverse()
-                              .map((r) => (
-                                <li
-                                  key={r._id}
-                                  className="text-[11px] text-slate-500 flex justify-between gap-2"
-                                >
-                                  <span>
-                                    {r.date
-                                      ? new Date(r.date).toLocaleDateString()
-                                      : "—"}{" "}
-                                    · {r.kind}
-                                  </span>
-                                  <span
-                                    className={
-                                      Number(r.amountUSD) >= 0
-                                        ? "text-emerald-600"
-                                        : "text-rose-500"
-                                    }
-                                  >
-                                    {formatOriginal(r.amount, r.currency)}
-                                  </span>
-                                </li>
-                              ))}
-                          </ul>
-                        )}
-                      </div>
-                    )}
+                    // Integrated snippet for Plans.jsx - Investment Gain Section inside Grid View Card
+{item.goalType === "Investment" && (
+  <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60">
+    <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mb-1">
+      {t("totalGain") || "Total gained"}:{" "}
+      {formatMoney(
+        item.totalGainUSD || 0,
+        displayCurrency,
+        rates,
+      )}
+      <span className="text-slate-400 font-normal">
+        {" "}
+        ({(item.investmentReturns || []).length}{" "}
+        {t("entries") || "entries"})
+      </span>
+    </div>
+    {Number(item.totalBorrowedFromGainUSD) > 0 && (
+      <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">
+        {t("borrowedFromGain") || "Borrowed from gain"}:{" "}
+        {formatMoney(
+          item.totalBorrowedFromGainUSD,
+          displayCurrency,
+          rates,
+        )}
+      </div>
+    )}
+    {(item.investmentReturns || []).length > 0 && (
+      <ul className="space-y-1 max-h-28 overflow-y-auto mt-1">
+        {[...(item.investmentReturns || [])]
+          .slice(-5)
+          .reverse()
+          .map((r) => (
+            <li
+              key={r._id}
+              className="text-[11px] text-slate-500 flex justify-between gap-2"
+            >
+              <span>
+                {r.date
+                  ? new Date(r.date).toLocaleDateString()
+                  : "—"}{" "}
+                · {r.kind}
+              </span>
+              <span
+                className={
+                  Number(r.amountUSD) >= 0
+                    ? "text-emerald-600"
+                    : "text-rose-500"
+                }
+              >
+                {formatOriginal(r.amount, r.currency)}
+              </span>
+            </li>
+          ))}
+      </ul>
+    )}
+  </div>
+)}
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/40 flex items-center justify-end gap-2">
