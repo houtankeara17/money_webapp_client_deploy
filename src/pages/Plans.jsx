@@ -999,7 +999,6 @@ const Plans = () => {
                       </span>
                     </div>
 
-                    // Integrated snippet for Plans.jsx - Investment Gain Section inside Grid View Card
 {item.goalType === "Investment" && (
   <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60">
     <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mb-1">
