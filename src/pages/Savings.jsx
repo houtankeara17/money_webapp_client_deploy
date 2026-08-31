@@ -480,7 +480,7 @@ const Savings = () => {
             className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/10 backdrop-blur-md text-sm font-semibold transition active:scale-[0.98]"
           >
             <Upload size={15} />
-            <span className="hidden sm:inline">{t("import") || "Import"}</span>
+            <span className="hidden sm:inline">{t("import")}</span>
           </button>
 
           <button
@@ -630,7 +630,7 @@ const Savings = () => {
                 onClick={clearFilters}
                 className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline inline-flex items-center gap-1"
               >
-                <RotateCcw size={12} /> {t("clearAll") || t("clearFilters")}
+                <RotateCcw size={12} /> {t("clearAll")}
               </button>
             )}
           </div>
@@ -722,7 +722,7 @@ const Savings = () => {
                   <th className="p-4">{t("amount")}</th>
                   <th className="p-4">{t("category")}</th>
                   <th className="p-4">{t("date")}</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="p-4 text-right">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/40">
@@ -820,11 +820,6 @@ const Savings = () => {
                   {item.noted && (
                     <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">
                       "{item.noted}"
-                    </p>
-                  )}
-                  {item.planId && (
-                    <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      📈 {t("fromPlan") || "From investment plan"}
                     </p>
                   )}
                 </div>
@@ -1016,9 +1011,9 @@ const Savings = () => {
         onClose={() => setConfirmDel(null)}
         onConfirm={doDelete}
         loading={deleting}
-        title={confirmDel === "all" ? t("deleteAll") : t("delete")}
+        title={confirmDel === "all" ? t("deleteAll") : t("deleteSaving")}
         message={
-          confirmDel === "all" ? t("confirmDeleteAll") : t("confirmDelete")
+          confirmDel === "all" ? t("confirmDeleteAllSavings") : t("confirmDeleteSaving")
         }
       />
     </div>
